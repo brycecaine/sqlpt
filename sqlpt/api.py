@@ -1,7 +1,16 @@
 import sqlparse
-from sqlparse.sql import Statement, Token
+from sqlparse.sql import Identifier, Statement, Token
 from sqlparse import tokens as T
 from sqlpt.query import FromClause, Join, Table
+
+
+def tokenize(sql):
+    sql_statement = sqlparse.parse(sql)
+    all_tokens = sql_statement[0].tokens
+    whitespace = Token(T.Whitespace, ' ')
+    tokens = [x for x in all_tokens if not x.is_whitespace]
+
+    return tokens
 
 
 def extract(sql):
@@ -23,19 +32,24 @@ def extract(sql):
 
     from_clause_tokens.pop(0)
     table_name = str(from_clause_tokens.pop(0))
-    main_table = Table(table_name)
+    first_table = Table(table_name)
 
     joins = []
 
     for i, item in enumerate(from_clause_tokens):
         if str(item) == 'join':
-            table = from_clause_tokens[i+1]
+            left_table = None
+
+            if i == 0:
+                left_table = first_table
+
+            right_table = Table(str(from_clause_tokens[i+1]))
             comparison = from_clause_tokens[i+3]
-            join = Join(table, comparison)
+            join = Join(left_table, right_table, comparison)
 
             joins.append(join)
 
-    from_clause = FromClause(main_table, joins)
+    from_clause = FromClause(joins)
 
     return from_clause
 
