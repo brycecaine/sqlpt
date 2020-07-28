@@ -1,6 +1,7 @@
 import sqlparse
 from sqlparse.sql import Statement, Token
 from sqlparse import tokens as T
+from sqlpt.query import FromClause, Join, Table
 
 
 def extract(sql):
@@ -10,13 +11,6 @@ def extract(sql):
     from_clause_tokens = []
 
     for sql_token in sql_elements[0].tokens:
-        """ token attributes and methods: [
-            'flatten', 'has_ancestor', 'is_child_of', 'is_group', 'is_keyword',
-            'is_whitespace', 'match', 'normalized', 'parent', 'ttype', 'value',
-            'within']
-        """
-
-        # Append from-clause tokens
         if not sql_token.is_whitespace:
             if sql_token.value == 'from':
                 start_appending = True
@@ -27,22 +21,23 @@ def extract(sql):
             if start_appending:
                 from_clause_tokens.append(sql_token)
 
-    whitespace = Token(T.Whitespace, ' ')
+    from_clause_tokens.pop(0)
+    table_name = str(from_clause_tokens.pop(0))
+    main_table = Table(table_name)
 
-    from_clause_tokens_with_whitespace = []
+    joins = []
 
-    # Insert whitespace
     for i, item in enumerate(from_clause_tokens):
-        from_clause_tokens_with_whitespace.append(item)
+        if str(item) == 'join':
+            table = from_clause_tokens[i+1]
+            comparison = from_clause_tokens[i+3]
+            join = Join(table, comparison)
 
-        if i % 1 == 0:
-            from_clause_tokens_with_whitespace.append(whitespace)
+            joins.append(join)
 
-    # Construct from-clause string
-    from_clause_statement = Statement(from_clause_tokens_with_whitespace)
-    from_clause_statement_str = str(from_clause_statement).strip()
+    from_clause = FromClause(main_table, joins)
 
-    return from_clause_statement_str
+    return from_clause
 
 
 def fuse():
