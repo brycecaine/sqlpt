@@ -97,3 +97,52 @@ class FromClause:
                     equal = True
 
         return equal
+
+
+class Comparison:
+    def __init__(self, left_expression, operator, right_expression):
+        self.left_expression = left_expression
+        self.operator = operator
+        self.right_expression = right_expression
+
+    def __eq__(self, other):
+        equal = False
+
+        if isinstance(other, self.__class__):
+            left_equal = self.left_expression == other.left_expression
+            operator_equal = self.operator == other.operator
+            right_equal = self.right_expression == other.right_expression
+
+            if left_equal and operator_equal and right_equal:
+                equal = True
+
+        return equal
+
+    def __str__(self):
+        comparison_str = (
+            f'{self.left_expression} {self.operator} {self.right_expression}')
+
+        return comparison_str
+
+
+class WhereClause:
+    def __init__(self, comparisons):
+        self.comparisons = comparisons
+
+    def __eq__(self, other):
+        equal = False
+
+        if isinstance(other, self.__class__):
+            for i, join in enumerate(self.comparisons):
+                if join == other.comparisons[i]:
+                    equal = True
+
+        return equal
+
+    def __str__(self):
+        where_clause_str = ''
+
+        for comparison in self.comparisons:
+            where_clause_str += str(comparison)
+
+        return where_clause_str

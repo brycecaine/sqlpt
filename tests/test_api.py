@@ -1,11 +1,14 @@
 import unittest
 
-from sqlpt import api
 import sqlparse
 from sqlparse import tokens as T
-from sqlparse.sql import Comparison, Identifier, Statement, Token, TokenList
+from sqlparse.sql import (Comparison, Identifier,
+                          Statement, Token,
+                          TokenList)
 
-from sqlpt import extract, query
+from sqlpt import (api, extract_from_clause,
+                   extract_where_clause, query)
+from sqlpt.api import extract_from_clause
 
 
 class TestApi(unittest.TestCase):
@@ -45,7 +48,7 @@ class TestApi(unittest.TestCase):
         from_clause = query.FromClause(joins)
 
         from_clause_expected = str(from_clause)
-        from_clause_actual = str(extract(sql))
+        from_clause_actual = str(extract_from_clause(sql))
 
         self.assertEqual(from_clause_actual, from_clause_expected)
 
@@ -67,10 +70,15 @@ class TestApi(unittest.TestCase):
                  " where stu_sem = '2020-Sp' "
                  "   and enrl = 1;")
 
-        from_clause_1 = extract(sql_1)
-        from_clause_2 = extract(sql_2)
+        from_clause_1 = extract_from_clause(sql_1)
+        from_clause_2 = extract_from_clause(sql_2)
+
+        where_clause_1 = extract_where_clause(sql_1)
+        where_clause_2 = extract_where_clause(sql_2)
 
         self.assertEqual(from_clause_1, from_clause_2)
+        self.assertEqual(where_clause_1, where_clause_2)
+        print(where_clause_1, where_clause_2)
 
     def test_parse(self):
         sql = ("select id, "
@@ -86,7 +94,8 @@ class TestApi(unittest.TestCase):
 
         sql_tokens = api.tokenize(sql)
 
-        print(sql_tokens)
+        # print(dir(sql_tokens[-1]))
+        # print(sql_tokens[-1].tokens)
 
 if __name__ == '__main__':
     unittest.main()
