@@ -148,6 +148,24 @@ class WhereClause:
 
         return where_clause_str
 
+    def parameterize(self, parameter_fields):
+        for comparison in self.comparisons:
+            left_expression = comparison.left_expression
+
+            if left_expression in parameter_fields:
+                comparison.right_expression = f':{left_expression}'
+
+        return self
+
+    def fuse(self, where_clause):
+        for self_comparison in self.comparisons:
+            for other_comparison in where_clause.comparisons:
+                if self_comparison.left_expression == other_comparison.left_expression:
+                    # TODO: Left off here
+                    # TODO: What to do with inequalities
+                    right_expression_list.append
+        return self
+
 
 class Query:
     def __init__(self, sql_str):
@@ -165,6 +183,7 @@ class Query:
 
         return tokens
 
+    @property
     def from_clause(self):
         sql_elements = sql_parse(self.sql_str)
 
@@ -205,6 +224,7 @@ class Query:
 
         return from_clause
 
+    @property
     def where_clause(self):
         sql_elements = sql_parse(self.sql_str)
 
@@ -232,3 +252,16 @@ class Query:
         where_clause = WhereClause(comparisons)
 
         return where_clause
+
+    def fuse(self, query):
+        # TODO: Figure out how to fuse from clauses
+        if self.from_clause == query.from_clause:
+            self.select_clause.fuse(query.select_clause)
+            self.where_clause.fuse(query.where_clause)
+
+        return self
+
+    def parameterize(self, parameter_fields):
+        self.where_clause.parameterize(parameter_fields)
+
+        return self

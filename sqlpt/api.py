@@ -86,9 +86,3 @@ def extract_where_clause(sql_str):
     where_clause = query.WhereClause(comparisons)
 
     return where_clause
-
-
-def fuse():
-    print('fusing')
-
-    return True

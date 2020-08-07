@@ -6,8 +6,10 @@ from sqlparse.sql import (Identifier,
                           Statement, Token,
                           TokenList)
 
-from sqlpt.api import extract_from_clause, extract_where_clause, tokenize
-from sqlpt.query import Query, Join, Table, FromClause, WhereClause, Field, Comparison
+from sqlpt.api import (
+    extract_from_clause, extract_where_clause, tokenize, fused)
+from sqlpt.query import (
+    Query, Join, Table, FromClause, WhereClause, Field, Comparison)
 
 
 class TestApi(unittest.TestCase):
@@ -182,6 +184,50 @@ class TestQuery(unittest.TestCase):
 
         # print(dir(sql_tokens[-1]))
         # print(sql_tokens[-1].tokens)
+
+    def test_fuse(self):
+        sql_1 = ("select id, "
+                 "       name, "
+                 "       first_term "
+                 "  from tbl_stu "
+                 "  join tbl_stu_crs "
+                 "    on tbl_stu.id = tbl_stu_crs.stu_id "
+                 " where stu_sem = '2019-Fa' "
+                 "   and major = 'MAGC';")
+
+        sql_2 = ("select id, "
+                 "       name, "
+                 "       major "
+                 "  from tbl_stu_crs "
+                 "  join tbl_stu "
+                 "    on tbl_stu.id = tbl_stu_crs.stu_id "
+                 " where stu_sem = '2020-Sp' "
+                 "   and enrl = 1;")
+
+        sql_3 = ("select id, "
+                 "       name, "
+                 "       first_term, "
+                 "       major "
+                 "  from tbl_stu_crs "
+                 "  join tbl_stu "
+                 "    on tbl_stu.id = tbl_stu_crs.stu_id "
+                 " where major = 'MAGC' "
+                 "   and enrl = 1 "
+                 "   and stu_sem = ':stu_sem';")
+
+        query_1 = Query(sql_1)
+        query_2 = Query(sql_2)
+
+        query_3 = Query(sql_3)
+
+        query_4 = fused(query_1, query_2)
+
+        self.assertEqual(query_4, query_3)
+
+        parameter_fields = ['stu_sem']
+        query_1.fuse(query_2).parameterize(parameter_fields)
+
+        self.assertEqual(query_1, query_3)
 
 
 if __name__ == '__main__':
