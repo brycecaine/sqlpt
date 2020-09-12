@@ -111,8 +111,7 @@ class Join:
 
                 tables_equal = left_equals_right and right_equals_left
 
-            comparison_equal = (
-                self.comparisons.value == other.comparisons.value)
+            comparison_equal = (self.comparisons == other.comparisons)
 
             equal = tables_equal and comparison_equal
 
@@ -352,6 +351,13 @@ class Query:
 
         return where_clause
 
+    @property
+    def dataframe(self):
+        engine = create_engine(self.db_str)
+        df = pd.read_sql_query(self.sql_str, engine)
+
+        return df
+
     def fuse(self, query):
         # TODO: Figure out how to fuse from clauses
         if self.from_clause == query.from_clause:
@@ -365,23 +371,24 @@ class Query:
 
         return self
 
-    def format(self):
+    def format_sql(self):
         formatted_sql = sqlparse.format(self.sql_str)
 
         return formatted_sql
 
     def describe(self):
-        engine = create_engine(self.db_str)
-        df = pd.read_sql_query(self.sql_str, engine)
-
-        description = df.describe()
+        description = self.dataframe.describe()
 
         return description
 
-    def head(self):
-        engine = create_engine(self.db_str)
-        df = pd.read_sql_query(self.sql_str, engine)
-
-        head_data = df.head(5)
+    def head(self, n=5):
+        head_data = self.dataframe.head(n)
 
         return head_data
+
+    def output_sql_file(self, path):
+        with open(path, 'wt') as sql_file:
+            sql_file.write(self.format_sql())
+
+    def output_data_file(self, path):
+        self.dataframe.to_csv(path, index=False)
