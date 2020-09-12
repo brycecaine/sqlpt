@@ -1,16 +1,5 @@
 import unittest
 
-import sqlparse
-from sqlparse import tokens as T
-from sqlparse.sql import (Identifier,
-                          Statement, Token,
-                          TokenList)
-
-from context import (
-    extract_from_clause, extract_where_clause, tokenize)  # , fused)
-from context import (
-    Query, Join, Table, FromClause, WhereClause, Field, Comparison)
-
 
 class TestApi(unittest.TestCase):
     def test_extract(self):

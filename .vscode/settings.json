@@ -1,0 +1,8 @@
+{
+    "python.pythonPath": "/Users/caine/venvs/sqlpt/bin/python3",
+    "cSpell.words": [
+        "sqlite",
+        "sqlpt"
+    ],
+    "python.linting.flake8Enabled": true
+}

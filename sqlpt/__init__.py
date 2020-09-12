@@ -1,1 +1,0 @@
-from sqlpt.api import extract_from_clause, extract_where_clause

@@ -1,6 +1,8 @@
-from sqlparse import parse as sql_parse, sql, tokens as T
-from email import header
-from typing import operator
+from sqlalchemy import create_engine
+from sqlparse.sql import (
+    Comparison as SQLParseComparison, Identifier, IdentifierList, Where)
+import pandas as pd
+import sqlparse
 
 
 class Table:
@@ -23,7 +25,9 @@ class Field:
         self.name = name
 
     def __str__(self):
-        return self.name
+        description = str(self.name)
+
+        return description
 
     def __eq__(self, other):
         equal = False
@@ -34,24 +38,61 @@ class Field:
         return equal
 
 
-class Join:
-    def __init__(self, left_table=None, right_table=None, comparison=None):
-        self.left_table = left_table
-        self.comparison = comparison
-        self.right_table = right_table
-    
+class SelectClause:
+    def __init__(self, fields):
+        self.fields = fields
+
     def __str__(self):
-        right_join_str = f'from {self.left_table}'
-        left_join_str = f'join {self.right_table} on {self.comparison}'
+        select_clause_str = ''
+
+        for i, field in enumerate(self.fields):
+            if i == 0:
+                select_clause_str += f'select {field}'
+
+            else:
+                select_clause_str += f', {field}'
+
+        return select_clause_str
+
+    def __eq__(self, other):
+        equal = False
+
+        if isinstance(other, self.__class__):
+            for i, field in enumerate(self.fields):
+                if field == other.fields[i]:
+                    equal = True
+
+        return equal
+
+    def fuse(self, select_clause):
+        pass
+
+
+class Join:
+    def __init__(self, left_table=None, right_table=None, comparisons=None):
+        self.left_table = left_table
+        self.comparisons = comparisons
+        self.right_table = right_table
+
+    def __str__(self):
+        left_side_str = f'from {self.left_table}'
+        right_side_str = f' join {self.right_table}'
+
+        for i, comparison in enumerate(self.comparisons):
+            if i == 0:
+                right_side_str += f' on {comparison}'
+
+            else:
+                right_side_str += f' and {comparison}'
 
         if not self.right_table:
-            join_str = right_join_str
+            join_str = left_side_str
 
         elif not self.left_table:
-            join_str = left_join_str
+            join_str = right_side_str
 
         else:
-            join_str = f'{right_join_str} {left_join_str}'
+            join_str = f'{left_side_str}{right_side_str}'
 
         return join_str
 
@@ -70,7 +111,8 @@ class Join:
 
                 tables_equal = left_equals_right and right_equals_left
 
-            comparison_equal = self.comparison.value == other.comparison.value
+            comparison_equal = (
+                self.comparisons.value == other.comparisons.value)
 
             equal = tables_equal and comparison_equal
 
@@ -85,7 +127,7 @@ class FromClause:
         from_clause_str = ''
 
         for join in self.joins:
-            from_clause_str += str(join)
+            from_clause_str += f'{join}'
 
         return from_clause_str
 
@@ -143,8 +185,12 @@ class WhereClause:
     def __str__(self):
         where_clause_str = ''
 
-        for comparison in self.comparisons:
-            where_clause_str += str(comparison)
+        for i, comparison in enumerate(self.comparisons):
+            if i == 0:
+                where_clause_str += f'where {comparison}'
+
+            else:
+                where_clause_str += f' and {comparison}'
 
         return where_clause_str
 
@@ -160,16 +206,26 @@ class WhereClause:
     def fuse(self, where_clause):
         for self_comparison in self.comparisons:
             for other_comparison in where_clause.comparisons:
-                if self_comparison.left_expression == other_comparison.left_expression:
+                if (self_comparison.left_expression ==
+                        other_comparison.left_expression):
                     # TODO: Left off here
                     # TODO: What to do with inequalities
-                    right_expression_list.append
+                    # right_expression_list.append
+                    pass
+
         return self
 
 
 class Query:
-    def __init__(self, sql_str):
+    def __init__(self, sql_str, db_str):
+        self.db_str = db_str
         self.sql_str = sql_str
+
+    def __str__(self):
+        description = (f'{self.select_clause} {self.from_clause} '
+                       f'{self.where_clause}')
+
+        return description
 
     def remove_whitespace(self, token_list):
         tokens = [x for x in token_list if not x.is_whitespace]
@@ -177,15 +233,33 @@ class Query:
         return tokens
 
     def tokenize(self):
-        sql_statement = sql_parse(self.sql_str)
+        sql_statement = sqlparse.parse(self.sql_str)
         all_tokens = sql_statement[0].tokens
         tokens = self.remove_whitespace(all_tokens)
 
         return tokens
 
     @property
+    def select_clause(self):
+        fields = []
+
+        sql_elements = sqlparse.parse(self.sql_str)
+
+        for sql_token in sql_elements[0].tokens:
+            if type(sql_token) == IdentifierList:
+                for identifier in sql_token:
+                    field_name = str(identifier)
+                    if field_name not in (',', ' '):
+                        field = Field(field_name)
+                        fields.append(field)
+
+        select_clause = SelectClause(fields)
+
+        return select_clause
+
+    @property
     def from_clause(self):
-        sql_elements = sql_parse(self.sql_str)
+        sql_elements = sqlparse.parse(self.sql_str)
 
         start_appending = False
         from_clause_tokens = []
@@ -209,14 +283,36 @@ class Query:
 
         for i, item in enumerate(from_clause_tokens):
             if str(item) == 'join':
+                # Determine left table if applicable
                 left_table = None
 
                 if i == 0:
                     left_table = first_table
 
+                # Determine right table
                 right_table = Table(str(from_clause_tokens[i+1]))
-                comparison = from_clause_tokens[i+3]
-                join = Join(left_table, right_table, comparison)
+
+                # Determine comparisons
+                j = 2
+                comparisons = []
+
+                while True:
+                    try:
+                        token = from_clause_tokens[i+j]
+
+                    except IndexError:
+                        break
+
+                    if str(token) in ('on', 'and'):
+                        comparison = from_clause_tokens[i+j+1]
+                        comparisons.append(comparison)
+
+                    else:
+                        break
+
+                    j += 2
+
+                join = Join(left_table, right_table, comparisons)
 
                 joins.append(join)
 
@@ -226,26 +322,29 @@ class Query:
 
     @property
     def where_clause(self):
-        sql_elements = sql_parse(self.sql_str)
+        sql_elements = sqlparse.parse(self.sql_str)
 
         comparisons = []
 
         for sql_token in sql_elements[0].tokens:
-            if type(sql_token) == sql.Where:
+            if type(sql_token) == Where:
                 where_tokens = sql_token.tokens
 
                 for where_token in where_tokens:
-                    if type(where_token) == sql.Comparison:
+                    if type(where_token) == SQLParseComparison:
 
-                        comparison_tokens = self.remove_whitespace(where_token.tokens)
-                        for i, comparison_token in enumerate(comparison_tokens):
-                            if type(comparison_token) == sql.Identifier:
-                                left_expression = comparison_token.value
+                        comparison_tokens = self.remove_whitespace(
+                            where_token.tokens)
+
+                        for i, c_token in enumerate(comparison_tokens):
+                            if type(c_token) == Identifier:
+                                left_expression = c_token.value
                                 operator = comparison_tokens[i+1].value
                                 right_expression = comparison_tokens[i+2].value
 
                                 comparison = Comparison(
-                                    left_expression, operator, right_expression)
+                                    left_expression, operator,
+                                    right_expression)
 
                                 comparisons.append(comparison)
 
@@ -265,3 +364,24 @@ class Query:
         self.where_clause.parameterize(parameter_fields)
 
         return self
+
+    def format(self):
+        formatted_sql = sqlparse.format(self.sql_str)
+
+        return formatted_sql
+
+    def describe(self):
+        engine = create_engine(self.db_str)
+        df = pd.read_sql_query(self.sql_str, engine)
+
+        description = df.describe()
+
+        return description
+
+    def head(self):
+        engine = create_engine(self.db_str)
+        df = pd.read_sql_query(self.sql_str, engine)
+
+        head_data = df.head(5)
+
+        return head_data
