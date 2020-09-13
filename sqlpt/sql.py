@@ -1,8 +1,26 @@
-from sqlalchemy import create_engine
-from sqlparse.sql import (
-    Comparison as SQLParseComparison, Identifier, IdentifierList, Where)
+from tokenize import tokenize
+
 import pandas as pd
 import sqlparse
+from sqlalchemy import create_engine
+from sqlparse.sql import \
+    Comparison as SQLParseComparison
+from sqlparse.sql import (Identifier,
+                          IdentifierList, Where)
+
+
+def remove_whitespace(token_list):
+    tokens = [x for x in token_list if not x.is_whitespace]
+
+    return tokens
+
+
+def tokenize(sql_str):
+    sql = sqlparse.parse(sql_str)
+    all_tokens = sql[0].tokens
+    tokens = remove_whitespace(all_tokens)
+
+    return tokens
 
 
 class Table:
@@ -12,12 +30,13 @@ class Table:
     def __str__(self):
         return self.name
 
-    def __eq__(self, other):
-        equal = False
-        if isinstance(other, self.__class__):
-            equal = self.name == other.name
+    def is_equivalent_to(self, other):
+        equivalent = False
 
-        return equal
+        if isinstance(other, self.__class__):
+            equivalent = self.name == other.name
+
+        return equivalent
 
 
 class Field:
@@ -29,17 +48,30 @@ class Field:
 
         return description
 
-    def __eq__(self, other):
-        equal = False
+    def is_equivalent_to(self, other):
+        equivalent = False
 
         if isinstance(other, self.__class__):
-            equal = self.name == other.name
+            equivalent = self.name == other.name
 
-        return equal
+        return equivalent
 
 
 class SelectClause:
-    def __init__(self, fields):
+    def __init__(self, select_clause_str):
+        fields = []
+
+        sql_elements = sqlparse.parse(select_clause_str)
+
+        for sql_token in sql_elements[0].tokens:
+            if type(sql_token) == IdentifierList:
+                for identifier in sql_token:
+                    field_name = str(identifier)
+
+                    if field_name not in (',', ' '):
+                        field = Field(field_name)
+                        fields.append(field)
+
         self.fields = fields
 
     def __str__(self):
@@ -54,15 +86,22 @@ class SelectClause:
 
         return select_clause_str
 
-    def __eq__(self, other):
-        equal = False
+    @property
+    def field_names(self):
+        field_names = []
+
+        for field in self.fields:
+            field_names.append(field.name)
+
+        return field_names
+
+    def is_equivalent_to(self, other):
+        equivalent = False
 
         if isinstance(other, self.__class__):
-            for i, field in enumerate(self.fields):
-                if field == other.fields[i]:
-                    equal = True
+            equivalent = set(self.field_names) == set(other.field_names)
 
-        return equal
+        return equivalent
 
     def fuse(self, select_clause):
         pass
@@ -96,26 +135,53 @@ class Join:
 
         return join_str
 
-    def __eq__(self, other):
-        equal = False
+    def is_equivalent_to(self, other):
+        equivalent = False
 
         if isinstance(other, self.__class__):
-            left_tables_equal = self.left_table == other.left_table
-            right_tables_equal = self.right_table == other.right_table
+            self_tables = [self.left_table, self.right_table]
+            other_tables = [other.left_table, other.right_table]
 
-            tables_equal = left_tables_equal and right_tables_equal
+            tables_equivalent = is_equivalent(self_tables, other_tables)
 
-            if not tables_equal:
-                left_equals_right = self.left_table == other.right_table
-                right_equals_left = self.right_table == other.left_table
+            comparison_equivalent = is_equivalent(
+                self.comparisons, other.comparisons)
 
-                tables_equal = left_equals_right and right_equals_left
+            equivalent = tables_equivalent and comparison_equivalent
 
-            comparison_equal = (self.comparisons == other.comparisons)
+        return equivalent
 
-            equal = tables_equal and comparison_equal
 
-        return equal
+def is_equivalent(object_list_1, object_list_2):
+    # Check if all of list 1 is equivalent with members of list 2
+    list_1_equivalence = {}
+
+    for list_1_object in object_list_1:
+        list_1_equivalence[list_1_object] = False
+
+        for list_2_object in object_list_2:
+            if list_1_object.is_equivalent_to(list_2_object):
+                list_1_equivalence[list_1_object] = True
+                break
+
+    list_1_equivalent = all(list_1_equivalence.values())
+
+    # Check if all of list 2 is equivalent with members of list 1
+    list_2_equivalence = {}
+
+    for list_2_object in object_list_2:
+        list_2_equivalence[list_2_object] = False
+
+        for list_1_object in object_list_1:
+            if list_2_object.is_equivalent_to(list_1_object):
+                list_2_equivalence[list_2_object] = True
+                break
+
+    list_2_equivalent = all(list_2_equivalence.values())
+
+    equivalent = list_1_equivalent and list_2_equivalent
+
+    return equivalent
 
 
 class FromClause:
@@ -130,15 +196,13 @@ class FromClause:
 
         return from_clause_str
 
-    def __eq__(self, other):
-        equal = False
+    def is_equivalent_to(self, other):
+        equivalent = False
 
         if isinstance(other, self.__class__):
-            for i, join in enumerate(self.joins):
-                if join == other.joins[i]:
-                    equal = True
+            equivalent = is_equivalent(self.joins, other.joins)
 
-        return equal
+        return equivalent
 
 
 class Comparison:
@@ -147,18 +211,21 @@ class Comparison:
         self.operator = operator
         self.right_expression = right_expression
 
-    def __eq__(self, other):
-        equal = False
+    def is_equivalent_to(self, other):
+        equivalent = False
 
         if isinstance(other, self.__class__):
-            left_equal = self.left_expression == other.left_expression
-            operator_equal = self.operator == other.operator
-            right_equal = self.right_expression == other.right_expression
+            if self.operator == '=':
+                operator_equivalent = self.operator == other.operator
 
-            if left_equal and operator_equal and right_equal:
-                equal = True
+                expressions_equivalent = (
+                    {self.left_expression, self.right_expression} ==
+                    {other.left_expression, other.right_expression})
 
-        return equal
+            if operator_equivalent and expressions_equivalent:
+                equivalent = True
+
+        return equivalent
 
     def __str__(self):
         comparison_str = (
@@ -171,15 +238,15 @@ class WhereClause:
     def __init__(self, comparisons):
         self.comparisons = comparisons
 
-    def __eq__(self, other):
-        equal = False
+    def is_equivalent_to(self, other):
+        equivalent = False
 
         if isinstance(other, self.__class__):
             for i, join in enumerate(self.comparisons):
                 if join == other.comparisons[i]:
-                    equal = True
+                    equivalent = True
 
-        return equal
+        return equivalent
 
     def __str__(self):
         where_clause_str = ''
@@ -226,33 +293,10 @@ class Query:
 
         return description
 
-    def remove_whitespace(self, token_list):
-        tokens = [x for x in token_list if not x.is_whitespace]
-
-        return tokens
-
-    def tokenize(self):
-        sql_statement = sqlparse.parse(self.sql_str)
-        all_tokens = sql_statement[0].tokens
-        tokens = self.remove_whitespace(all_tokens)
-
-        return tokens
-
     @property
     def select_clause(self):
-        fields = []
-
-        sql_elements = sqlparse.parse(self.sql_str)
-
-        for sql_token in sql_elements[0].tokens:
-            if type(sql_token) == IdentifierList:
-                for identifier in sql_token:
-                    field_name = str(identifier)
-                    if field_name not in (',', ' '):
-                        field = Field(field_name)
-                        fields.append(field)
-
-        select_clause = SelectClause(fields)
+        # TODO: Extract select_clause_str from sql_str
+        select_clause = SelectClause(self.sql_str)
 
         return select_clause
 
@@ -303,7 +347,18 @@ class Query:
                         break
 
                     if str(token) in ('on', 'and'):
-                        comparison = from_clause_tokens[i+j+1]
+                        sql_parse_comparison = from_clause_tokens[i+j+1]
+
+                        token_str_list = []
+
+                        comparison_tokens = remove_whitespace(
+                            sql_parse_comparison.tokens)
+
+                        for comparison_token in comparison_tokens:
+                            token_str_list.append(comparison_token.value)
+
+                        comparison = Comparison(*token_str_list)
+
                         comparisons.append(comparison)
 
                     else:
@@ -332,7 +387,7 @@ class Query:
                 for where_token in where_tokens:
                     if type(where_token) == SQLParseComparison:
 
-                        comparison_tokens = self.remove_whitespace(
+                        comparison_tokens = remove_whitespace(
                             where_token.tokens)
 
                         for i, c_token in enumerate(comparison_tokens):
