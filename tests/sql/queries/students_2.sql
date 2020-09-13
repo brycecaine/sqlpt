@@ -1,4 +1,5 @@
 select student.id,
+       person_with_age.name,
        term.code,
        age,
        subject,
@@ -16,6 +17,7 @@ select student.id,
   left
   join (select id,
                id_number,
+               name,
                (date('now') - birth_date) / 365 age
           from person) person_with_age
     on student.person_id = person_with_age.id
