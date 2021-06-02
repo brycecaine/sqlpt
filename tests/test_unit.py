@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from sqlpt.sql import Field, Query, SelectClause
+from sqlpt.sql import Comparison, Field, Join, Query, SelectClause, Table
 
 
 class QueryTestCase(TestCase):
@@ -9,7 +9,7 @@ class QueryTestCase(TestCase):
             'select a name, b, fn(id, dob) age, fn(id, height) from c join d on e = f where g = h and i = j',
             'mock_db_str')
 
-    def test_query_fields(self):
+    def test_fields(self):
         expected_fields = [
             Field(expression='a', alias='name'),
             Field(expression='b', alias=''),
@@ -19,6 +19,21 @@ class QueryTestCase(TestCase):
         actual_fields = self.query.select_clause.fields
 
         self.assertEqual(actual_fields, expected_fields)
+
+    def test_joins(self):
+        expected_joins = [
+            Join(
+                left_table=Table(name='c'),
+                right_table=Table(name='d'),
+                comparisons=[Comparison(left_expression='e',
+                                        operator='=',
+                                        right_expression='f')]
+            )
+        ]
+
+        actual_joins = self.query.from_clause.joins
+
+        self.assertEqual(actual_joins, expected_joins)
 
 
 class EquivalenceTestCase(TestCase):

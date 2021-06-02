@@ -37,9 +37,14 @@ def get_function_from_statement(statement):
     return function_str
 
 
+@dataclass
 class Table:
+    name: str
+
+    """
     def __init__(self, name):
         self.name = name
+    """
 
     def __str__(self):
         return self.name
@@ -120,11 +125,18 @@ class SelectClause:
         pass
 
 
+@dataclass
 class Join:
+    left_table: Table
+    right_table: Table
+    comparisons: list
+
+    """
     def __init__(self, left_table=None, right_table=None, comparisons=None):
         self.left_table = left_table
         self.comparisons = comparisons
         self.right_table = right_table
+    """
 
     def __str__(self):
         left_side_str = f'from {self.left_table}'
@@ -218,12 +230,19 @@ class FromClause:
         return equivalent
 
 
+@dataclass
 class Comparison:
     # Figure out a new name for "expression" (maybe "value"?)
+    left_expression: str
+    operator: str
+    right_expression: str
+
+    """
     def __init__(self, left_expression, operator, right_expression):
         self.left_expression = left_expression
         self.operator = operator
         self.right_expression = right_expression
+    """
 
     def is_equivalent_to(self, other):
         equivalent = False
