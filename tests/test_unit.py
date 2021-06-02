@@ -1,13 +1,15 @@
 from unittest import TestCase
 
-from sqlpt.sql import Comparison, Field, Join, Query, SelectClause, Table
+from sqlpt.sql import (Comparison, Field, FromClause, Join, Query,
+                       SelectClause, Table, WhereClause)
 
 
 class QueryTestCase(TestCase):
     def setUp(self):
-        self.query = Query(
-            'select a name, b, fn(id, dob) age, fn(id, height) from c join d on e = f where g = h and i = j',
-            'mock_db_str')
+        self.sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
+                        'from c join d on e = f where g = h and i = j')
+        self.db_str = 'mock_db_str'
+        self.query = Query(self.sql_str, self.db_str)
 
     def test_fields(self):
         expected_fields = [
@@ -19,6 +21,19 @@ class QueryTestCase(TestCase):
         actual_fields = self.query.select_clause.fields
 
         self.assertEqual(actual_fields, expected_fields)
+
+        self.assertEqual(str(actual_fields[0]), 'a name')
+        self.assertEqual(str(actual_fields[1]), 'b')
+        self.assertEqual(str(actual_fields[2]), 'fn(id, dob) age')
+        self.assertEqual(str(actual_fields[3]), 'fn(id, height)')
+
+    def test_select_clause(self):
+        expected_select_clause_str = 'select a name, b, fn(id, dob) age, fn(id, height)'
+        expected_select_clause = SelectClause(expected_select_clause_str)
+        actual_select_clause = self.query.select_clause
+
+        self.assertEqual(actual_select_clause, expected_select_clause)
+        self.assertEqual(str(actual_select_clause), expected_select_clause_str)
 
     def test_joins(self):
         expected_joins = [
@@ -34,6 +49,47 @@ class QueryTestCase(TestCase):
         actual_joins = self.query.from_clause.joins
 
         self.assertEqual(actual_joins, expected_joins)
+
+        self.assertEqual(str(actual_joins[0]), 'c join d on e = f')
+
+    def test_from_clause(self):
+        expected_joins = [
+            Join(
+                left_table=Table(name='c'),
+                right_table=Table(name='d'),
+                comparisons=[Comparison(left_expression='e',
+                                        operator='=',
+                                        right_expression='f')]
+            )
+        ]
+
+        expected_from_clause = FromClause(expected_joins)
+        actual_from_clause = self.query.from_clause
+
+        self.assertEqual(actual_from_clause, expected_from_clause)
+
+        self.assertEqual(str(actual_from_clause), 'from c join d on e = f')
+
+    def test_where_clause(self):
+        # TODO: Use custom Identifier and Comparison (or inherit) for better comparing in this test
+        comparisons = [
+            [],
+            [],
+        ]
+        expected_where_clause = WhereClause(comparisons)
+        actual_where_clause = self.query.where_clause
+
+        self.assertEqual(actual_where_clause, expected_where_clause)
+
+        self.assertEqual(str(actual_where_clause), 'where g = h and i = j')
+
+    def test_query(self):
+        expected_query = Query(self.sql_str, self.db_str)
+        actual_query = self.query
+
+        self.assertEqual(actual_query, expected_query)
+
+        self.assertEqual(str(actual_query), self.sql_str)
 
 
 class EquivalenceTestCase(TestCase):

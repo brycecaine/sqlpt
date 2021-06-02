@@ -41,11 +41,6 @@ def get_function_from_statement(statement):
 class Table:
     name: str
 
-    """
-    def __init__(self, name):
-        self.name = name
-    """
-
     def __str__(self):
         return self.name
 
@@ -63,8 +58,16 @@ class Field:
     expression: str
     alias: str
 
+    def __str__(self):
+        alias = f' {self.alias}' if self.alias else ''
+        description = f'{self.expression}{alias}'
 
+        return description
+
+@dataclass
 class SelectClause:
+    fields: list
+
     def __init__(self, select_clause_str):
         fields = []
 
@@ -131,15 +134,8 @@ class Join:
     right_table: Table
     comparisons: list
 
-    """
-    def __init__(self, left_table=None, right_table=None, comparisons=None):
-        self.left_table = left_table
-        self.comparisons = comparisons
-        self.right_table = right_table
-    """
-
     def __str__(self):
-        left_side_str = f'from {self.left_table}'
+        left_side_str = f'{self.left_table}'
         right_side_str = f' join {self.right_table}'
 
         for i, comparison in enumerate(self.comparisons):
@@ -209,12 +205,12 @@ def is_equivalent(object_list_1, object_list_2):
     return equivalent
 
 
+@dataclass
 class FromClause:
-    def __init__(self, joins):
-        self.joins = joins
+    joins: list
 
     def __str__(self):
-        from_clause_str = ''
+        from_clause_str = 'from '
 
         for join in self.joins:
             from_clause_str += f'{join}'
@@ -236,13 +232,6 @@ class Comparison:
     left_expression: str
     operator: str
     right_expression: str
-
-    """
-    def __init__(self, left_expression, operator, right_expression):
-        self.left_expression = left_expression
-        self.operator = operator
-        self.right_expression = right_expression
-    """
 
     def is_equivalent_to(self, other):
         equivalent = False
@@ -267,9 +256,9 @@ class Comparison:
         return comparison_str
 
 
+@dataclass
 class WhereClause:
-    def __init__(self, comparisons):
-        self.comparisons = comparisons
+    comparisons: list
 
     def is_equivalent_to(self, other):
         equivalent = False
@@ -315,10 +304,10 @@ class WhereClause:
         return self
 
 
+@dataclass
 class Query:
-    def __init__(self, sql_str, db_str):
-        self.db_str = db_str
-        self.sql_str = sql_str
+    sql_str: str
+    db_str: str
 
     def __str__(self):
         description = (f'{self.select_clause} {self.from_clause} '
@@ -434,6 +423,7 @@ class Query:
                                     right_expression)
 
                                 comparisons.append(comparison)
+                                break
 
         where_clause = WhereClause(comparisons)
 
