@@ -1,9 +1,27 @@
 from unittest import TestCase
 
-from sqlpt.sql import Query, SelectClause
+from sqlpt.sql import Field, Query, SelectClause
 
 
-class TestUnit(TestCase):
+class QueryTestCase(TestCase):
+    def setUp(self):
+        self.query = Query(
+            'select a name, b, fn(id, dob) age, fn(id, height) from c join d on e = f where g = h and i = j',
+            'mock_db_str')
+
+    def test_query_fields(self):
+        expected_fields = [
+            Field(expression='a', alias='name'),
+            Field(expression='b', alias=''),
+            Field(expression='fn(id, dob)', alias='age'),
+            Field(expression='fn(id, height)', alias=''),
+        ]
+        actual_fields = self.query.select_clause.fields
+
+        self.assertEqual(actual_fields, expected_fields)
+
+
+class EquivalenceTestCase(TestCase):
     def setUp(self):
         self.query_1 = Query(
             'select a, b from c join d on e = f where g = h and i = j',

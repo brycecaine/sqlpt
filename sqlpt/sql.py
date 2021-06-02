@@ -1,3 +1,4 @@
+import re
 from tokenize import tokenize
 
 import pandas as pd
@@ -7,6 +8,7 @@ from sqlparse.sql import \
     Comparison as SQLParseComparison
 from sqlparse.sql import (Identifier,
                           IdentifierList, Where)
+from dataclasses import dataclass
 
 
 def remove_whitespace(token_list):
@@ -15,12 +17,24 @@ def remove_whitespace(token_list):
     return tokens
 
 
+# TODO: Choose tokenize version (local or imported)
 def tokenize(sql_str):
     sql = sqlparse.parse(sql_str)
     all_tokens = sql[0].tokens
     tokens = remove_whitespace(all_tokens)
 
     return tokens
+
+
+def get_function_from_statement(statement):
+    match = re.match('.+\(.*\)', statement)
+
+    function_str = ''
+
+    if match:
+        function_str = match.group()
+
+    return function_str
 
 
 class Table:
@@ -39,22 +53,10 @@ class Table:
         return equivalent
 
 
+@dataclass
 class Field:
-    def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        description = str(self.name)
-
-        return description
-
-    def is_equivalent_to(self, other):
-        equivalent = False
-
-        if isinstance(other, self.__class__):
-            equivalent = self.name == other.name
-
-        return equivalent
+    expression: str
+    alias: str
 
 
 class SelectClause:
@@ -66,10 +68,30 @@ class SelectClause:
         for sql_token in sql_elements[0].tokens:
             if type(sql_token) == IdentifierList:
                 for identifier in sql_token:
-                    field_name = str(identifier)
+                    field_statement = str(identifier)
 
-                    if field_name not in (',', ' '):
-                        field = Field(field_name)
+                    if field_statement not in (',', ' '):
+                        function_str = get_function_from_statement(field_statement)
+
+                        if function_str:
+                            field_expression = function_str
+                            field_alias = (
+                                field_statement.replace(function_str, '')
+                                               .replace(' as ', '')
+                                               .replace(' AS ', '')
+                                               .replace(' ', ''))
+
+                        else:
+                            field_statement_elements = field_statement.rsplit(' ', 1)
+                            field_expression = field_statement_elements[0]
+
+                            if len(field_statement_elements) > 1:
+                                field_alias = field_statement_elements[1]
+
+                            else:
+                                field_alias = ''
+
+                        field = Field(field_expression, field_alias)
                         fields.append(field)
 
         self.fields = fields
@@ -86,20 +108,11 @@ class SelectClause:
 
         return select_clause_str
 
-    @property
-    def field_names(self):
-        field_names = []
-
-        for field in self.fields:
-            field_names.append(field.name)
-
-        return field_names
-
     def is_equivalent_to(self, other):
         equivalent = False
 
         if isinstance(other, self.__class__):
-            equivalent = set(self.field_names) == set(other.field_names)
+            equivalent = set(self.fields) == set(other.fields)
 
         return equivalent
 
@@ -206,6 +219,7 @@ class FromClause:
 
 
 class Comparison:
+    # Figure out a new name for "expression" (maybe "value"?)
     def __init__(self, left_expression, operator, right_expression):
         self.left_expression = left_expression
         self.operator = operator
