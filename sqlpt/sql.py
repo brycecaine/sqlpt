@@ -1,14 +1,13 @@
 import re
+from copy import deepcopy
+from dataclasses import dataclass
 from tokenize import tokenize
 
 import pandas as pd
 import sqlparse
 from sqlalchemy import create_engine
-from sqlparse.sql import \
-    Comparison as SQLParseComparison
-from sqlparse.sql import (Identifier,
-                          IdentifierList, Where)
-from dataclasses import dataclass
+from sqlparse.sql import Comparison as SQLParseComparison
+from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
 
 def remove_whitespace(token_list):
@@ -38,7 +37,12 @@ def get_function_from_statement(statement):
 
 
 @dataclass
-class Table:
+class DataSet:
+    pass
+
+
+@dataclass
+class Table(DataSet):
     name: str
 
     def __hash__(self):
@@ -56,6 +60,37 @@ class Table:
         return equivalent
 
 
+def get_field_from_identifier(identifier):
+    field = None
+
+    field_statement = str(identifier)
+
+    if field_statement not in (',', ' ', '\n'):
+        function_str = get_function_from_statement(field_statement)
+
+        if function_str:
+            field_expression = function_str
+            field_alias = (
+                field_statement.replace(function_str, '')
+                                .replace(' as ', '')
+                                .replace(' AS ', '')
+                                .replace(' ', ''))
+
+        else:
+            field_statement_elements = field_statement.rsplit(' ', 1)
+            field_expression = field_statement_elements[0]
+
+            if len(field_statement_elements) > 1:
+                field_alias = field_statement_elements[1]
+
+            else:
+                field_alias = ''
+
+        field = Field(field_expression, field_alias)
+
+    return field
+
+
 @dataclass
 class Field:
     expression: str
@@ -70,6 +105,7 @@ class Field:
 
         return description
 
+
 @dataclass
 class SelectClause:
     fields: list
@@ -82,34 +118,27 @@ class SelectClause:
 
         sql_elements = sqlparse.parse(select_clause_str)
 
-        for sql_token in sql_elements[0].tokens:
-            if type(sql_token) == IdentifierList:
-                for identifier in sql_token:
-                    field_statement = str(identifier)
+        sql_tokens = remove_whitespace(sql_elements[0].tokens)
 
-                    if field_statement not in (',', ' '):
-                        function_str = get_function_from_statement(field_statement)
+        select_fields = None
 
-                        if function_str:
-                            field_expression = function_str
-                            field_alias = (
-                                field_statement.replace(function_str, '')
-                                               .replace(' as ', '')
-                                               .replace(' AS ', '')
-                                               .replace(' ', ''))
+        for i, item in enumerate(sql_tokens):
+            if is_select(item):
+                select_fields = sql_tokens[i+1]
 
-                        else:
-                            field_statement_elements = field_statement.rsplit(' ', 1)
-                            field_expression = field_statement_elements[0]
+        if type(select_fields) == IdentifierList:
+            for identifier in select_fields:
+                field = get_field_from_identifier(identifier)
 
-                            if len(field_statement_elements) > 1:
-                                field_alias = field_statement_elements[1]
+                if field:
+                    fields.append(field)
 
-                            else:
-                                field_alias = ''
+        elif type(select_fields) == Identifier:
+            identifier = select_fields
+            field = get_field_from_identifier(identifier)
 
-                        field = Field(field_expression, field_alias)
-                        fields.append(field)
+            if field:
+                fields.append(field)
 
         self.fields = fields
 
@@ -139,32 +168,19 @@ class SelectClause:
 
 @dataclass
 class Join:
-    left_table: Table
-    right_table: Table
+    kind: str
+    dataset: DataSet
     comparisons: list
 
     def __hash__(self):
         return hash(str(self))
 
     def __str__(self):
-        left_side_str = f'{self.left_table}'
-        right_side_str = f' join {self.right_table}'
+        join_str = f' {self.kind} {self.dataset}'
 
         for i, comparison in enumerate(self.comparisons):
-            if i == 0:
-                right_side_str += f' on {comparison}'
-
-            else:
-                right_side_str += f' and {comparison}'
-
-        if not self.right_table:
-            join_str = left_side_str
-
-        elif not self.left_table:
-            join_str = right_side_str
-
-        else:
-            join_str = f'{left_side_str}{right_side_str}'
+            conjunction = 'on' if i == 0 else 'and'
+            join_str += f' {conjunction} {comparison}'
 
         return join_str
 
@@ -172,15 +188,13 @@ class Join:
         equivalent = False
 
         if isinstance(other, self.__class__):
-            self_tables = [self.left_table, self.right_table]
-            other_tables = [other.left_table, other.right_table]
-
-            tables_equivalent = is_equivalent(self_tables, other_tables)
+            datasets_equivalent = is_equivalent(
+                [self.dataset], [other.dataset])
 
             comparison_equivalent = is_equivalent(
                 self.comparisons, other.comparisons)
 
-            equivalent = tables_equivalent and comparison_equivalent
+            equivalent = datasets_equivalent and comparison_equivalent
 
         return equivalent
 
@@ -219,13 +233,14 @@ def is_equivalent(object_list_1, object_list_2):
 
 @dataclass
 class FromClause:
+    from_table: Table
     joins: list
 
     def __hash__(self):
         return hash(str(self))
 
     def __str__(self):
-        from_clause_str = 'from '
+        from_clause_str = f'from {self.from_table}'
 
         for join in self.joins:
             from_clause_str += f'{join}'
@@ -236,6 +251,8 @@ class FromClause:
         equivalent = False
 
         if isinstance(other, self.__class__):
+            # TODO: Allow for equivalence if tables and comparisons are out of
+            # order
             equivalent = is_equivalent(self.joins, other.joins)
 
         return equivalent
@@ -325,10 +342,89 @@ class WhereClause:
         return self
 
 
+def is_select(item):
+    item_is_select = False
+
+    if type(item) == Token and 'select' in str(item).lower():
+        item_is_select = True
+
+    return item_is_select
+
+
+def is_join(item):
+    item_is_join = False
+
+    if type(item) == Token and 'join' in str(item).lower():
+        item_is_join = True
+
+    return item_is_join
+
+
+def is_dataset(item):
+    item_is_dataset = False
+
+    if type(item) in (Identifier, Parenthesis):
+        item_is_dataset = True
+
+    return item_is_dataset
+
+
+def is_conjunction(item):
+    item_is_conjunction = False
+
+    item_str = str(item).lower()
+
+    if type(item) == Token and ('on' in item_str or 'and' in item_str):
+        item_is_conjunction = True
+
+    return item_is_conjunction
+
+
+def is_comparison(item):
+    item_is_comparison = False
+
+    if type(item) == SQLParseComparison:
+        item_is_comparison = True
+
+    return item_is_comparison
+
+
+def get_join_kind(item):
+    join_kind = 'join'
+
+    if type(item) == Token and 'left' in str(item).lower():
+        join_kind = 'left join'
+
+    return join_kind
+
+
+def get_dataset(item):
+    if type(item) == Identifier:
+        dataset = Table(str(item))
+
+    elif type(item) == Parenthesis:
+        sql_str = str(item)[1:-1]
+        dataset = SubQuery(sql_str)
+
+    return dataset
+
+
+def get_comparison(item):
+    token_str_list = []
+
+    comparison_tokens = remove_whitespace(item.tokens)
+
+    for comparison_token in comparison_tokens:
+        token_str_list.append(comparison_token.value)
+
+    comparison = Comparison(*token_str_list)
+
+    return comparison
+
+
 @dataclass
-class Query:
+class Query(DataSet):
     sql_str: str
-    db_str: str
 
     def __hash__(self):
         return hash(str(self))
@@ -346,6 +442,8 @@ class Query:
 
         return select_clause
 
+    # TODO: Move these assignment methods to their respective class __init__()
+    # methods
     @property
     def from_clause(self):
         sql_elements = sqlparse.parse(self.sql_str)
@@ -353,7 +451,9 @@ class Query:
         start_appending = False
         from_clause_tokens = []
 
-        for sql_token in sql_elements[0].tokens:
+        sql_tokens = remove_whitespace(sql_elements[0].tokens)
+
+        for sql_token in sql_tokens:
             if not sql_token.is_whitespace:
                 if sql_token.value == 'from':
                     start_appending = True
@@ -364,59 +464,66 @@ class Query:
                 if start_appending:
                     from_clause_tokens.append(sql_token)
 
+        # Remove 'from' keyword for now
         from_clause_tokens.pop(0)
-        table_name = str(from_clause_tokens.pop(0))
-        first_table = Table(table_name)
 
+        # Get from_table
+        from_table_name = str(from_clause_tokens.pop(0))
+        from_table = Table(from_table_name)
+
+        # Construct joins
         joins = []
 
-        for i, item in enumerate(from_clause_tokens):
-            if str(item) == 'join':
-                # Determine left table if applicable
-                left_table = None
+        kind = None
+        dataset = None
+        comparisons = []
 
-                if i == 0:
-                    left_table = first_table
+        for item in from_clause_tokens:
+            # Parse join item
+            item_is_join = is_join(item)
 
-                # Determine right table
-                right_table = Table(str(from_clause_tokens[i+1]))
+            if item_is_join:
+                # Create join object with previously populated values if
+                # applicable, and clear out values for a next one
+                if kind and dataset and comparisons:
+                    join_kind = deepcopy(str(kind))
+                    join_dataset = deepcopy(str(dataset))
+                    join_comparisons = deepcopy(comparisons)
 
-                # Determine comparisons
-                j = 2
-                comparisons = []
+                    join = Join(join_kind, join_dataset, join_comparisons)
+                    joins.append(join)
 
-                while True:
-                    try:
-                        token = from_clause_tokens[i+j]
+                    kind = None
+                    dataset = None
+                    comparisons = []
 
-                    except IndexError:
-                        break
+                kind = get_join_kind(item)
 
-                    if str(token) in ('on', 'and'):
-                        sql_parse_comparison = from_clause_tokens[i+j+1]
+                continue
 
-                        token_str_list = []
+            # Parse dataset item
+            item_is_dataset = is_dataset(item)
 
-                        comparison_tokens = remove_whitespace(
-                            sql_parse_comparison.tokens)
+            if item_is_dataset:
+                dataset = get_dataset(item)
 
-                        for comparison_token in comparison_tokens:
-                            token_str_list.append(comparison_token.value)
+                continue
 
-                        comparison = Comparison(*token_str_list)
+            # Parse comparison item
+            item_is_comparison = is_comparison(item)
 
-                        comparisons.append(comparison)
+            if item_is_comparison:
+                comparison = get_comparison(item)
+                comparisons.append(comparison)
 
-                    else:
-                        break
+                continue
 
-                    j += 2
+        # Create the last join
+        if kind and dataset and comparisons:
+            join = Join(kind, dataset, comparisons)
+            joins.append(join)
 
-                join = Join(left_table, right_table, comparisons)
-
-                joins.append(join)
-
-        from_clause = FromClause(joins)
+        from_clause = FromClause(from_table, joins)
 
         return from_clause
 
@@ -495,3 +602,12 @@ class Query:
 
     def output_data_file(self, path):
         self.dataframe.to_csv(path, index=False)
+
+
+@dataclass
+class SubQuery(Query):
+    def __str__(self):
+        description = (f'({self.select_clause} {self.from_clause} '
+                       f'{self.where_clause})')
+
+        return description

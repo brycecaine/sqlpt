@@ -90,6 +90,39 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_query), self.sql_str)
 
 
+class ComplexQueryTestCase(TestCase):
+    def setUp(self):
+        self.sql_str = '''
+            select a name,
+                   b,
+                   fn(id, dob) age,
+                   fn(id, height),
+                   (select c1 from a1 where a1.b1 = b) c1
+              from c
+              join d
+                on e = f
+              left
+              join (select shape from k where kind = 'quadrilateral')
+                on l = m
+               and n = o
+             where g = h
+               and i = j
+        '''
+
+        self.query = Query(self.sql_str)
+
+    def test_query(self):
+        expected_query = Query(self.sql_str)
+        actual_query = self.query
+
+        self.assertEqual(actual_query, expected_query)
+
+        actual_query_str = str(actual_query).replace(' ', '').replace('\n', '')
+        expected_query_str = self.sql_str.replace(' ', '').replace('\n', '')
+
+        self.assertEqual(actual_query_str, expected_query_str)
+
+
 class EquivalenceTestCase(TestCase):
     def setUp(self):
         self.query_1 = Query(
