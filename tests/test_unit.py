@@ -8,8 +8,7 @@ class QueryTestCase(TestCase):
     def setUp(self):
         self.sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
                         'from c join d on e = f where g = h and i = j')
-        self.db_str = 'mock_db_str'
-        self.query = Query(self.sql_str, self.db_str)
+        self.query = Query(self.sql_str)
 
     def test_fields(self):
         expected_fields = [
@@ -83,7 +82,7 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_where_clause), 'where g = h and i = j')
 
     def test_query(self):
-        expected_query = Query(self.sql_str, self.db_str)
+        expected_query = Query(self.sql_str)
         actual_query = self.query
 
         self.assertEqual(actual_query, expected_query)
@@ -94,11 +93,9 @@ class QueryTestCase(TestCase):
 class EquivalenceTestCase(TestCase):
     def setUp(self):
         self.query_1 = Query(
-            'select a, b from c join d on e = f where g = h and i = j',
-            'mock_db_str')
+            'select a, b from c join d on e = f where g = h and i = j')
         self.query_2 = Query(
-            'select b, a from d join c on f = e where h = g and j = i',
-            'mock_db_str')
+            'select b, a from d join c on f = e where h = g and j = i')
         self.select_clause_1 = SelectClause('select a, b')
         self.select_clause_2 = SelectClause('select b, a')
 

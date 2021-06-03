@@ -453,9 +453,11 @@ class Query:
         return where_clause
 
     @property
-    def dataframe(self):
-        engine = create_engine(self.db_str)
-        df = pd.read_sql_query(self.sql_str, engine)
+    def dataframe(self, db_conn):
+        if not db_conn:
+            db_conn = create_engine('mock_db_str')
+
+        df = pd.read_sql_query(self.sql_str, db_conn)
 
         return df
 
