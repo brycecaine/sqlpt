@@ -71,10 +71,9 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_from_clause), 'from c join d on e = f')
 
     def test_where_clause(self):
-        # TODO: Use custom Identifier and Comparison (or inherit) for better comparing in this test
         comparisons = [
-            [],
-            [],
+            Comparison(left_expression='g', operator='=', right_expression='h'),
+            Comparison(left_expression='i', operator='=', right_expression='j'),
         ]
         expected_where_clause = WhereClause(comparisons)
         actual_where_clause = self.query.where_clause

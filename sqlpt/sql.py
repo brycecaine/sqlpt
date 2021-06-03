@@ -408,7 +408,6 @@ class Query:
 
                 for where_token in where_tokens:
                     if type(where_token) == SQLParseComparison:
-
                         comparison_tokens = remove_whitespace(
                             where_token.tokens)
 
