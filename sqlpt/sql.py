@@ -41,6 +41,9 @@ def get_function_from_statement(statement):
 class Table:
     name: str
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __str__(self):
         return self.name
 
@@ -58,6 +61,9 @@ class Field:
     expression: str
     alias: str
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __str__(self):
         alias = f' {self.alias}' if self.alias else ''
         description = f'{self.expression}{alias}'
@@ -67,6 +73,9 @@ class Field:
 @dataclass
 class SelectClause:
     fields: list
+
+    def __hash__(self):
+        return hash(str(self))
 
     def __init__(self, select_clause_str):
         fields = []
@@ -133,6 +142,9 @@ class Join:
     left_table: Table
     right_table: Table
     comparisons: list
+
+    def __hash__(self):
+        return hash(str(self))
 
     def __str__(self):
         left_side_str = f'{self.left_table}'
@@ -209,6 +221,9 @@ def is_equivalent(object_list_1, object_list_2):
 class FromClause:
     joins: list
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __str__(self):
         from_clause_str = 'from '
 
@@ -232,6 +247,9 @@ class Comparison:
     left_expression: str
     operator: str
     right_expression: str
+
+    def __hash__(self):
+        return hash(str(self))
 
     def is_equivalent_to(self, other):
         equivalent = False
@@ -259,6 +277,9 @@ class Comparison:
 @dataclass
 class WhereClause:
     comparisons: list
+
+    def __hash__(self):
+        return hash(str(self))
 
     def is_equivalent_to(self, other):
         equivalent = False
@@ -308,6 +329,9 @@ class WhereClause:
 class Query:
     sql_str: str
     db_str: str
+
+    def __hash__(self):
+        return hash(str(self))
 
     def __str__(self):
         description = (f'{self.select_clause} {self.from_clause} '
