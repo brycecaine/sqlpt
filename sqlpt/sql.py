@@ -1,3 +1,4 @@
+from sqlite3 import connect
 import re
 from copy import deepcopy
 from dataclasses import dataclass
@@ -7,13 +8,20 @@ import pandas as pd
 import sqlparse
 from sqlalchemy import create_engine
 from sqlparse.sql import Comparison as SQLParseComparison
-from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
+from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Function, Token, Where
 
 
 def remove_whitespace(token_list):
     tokens = [x for x in token_list if not x.is_whitespace]
 
     return tokens
+
+
+def remove_whitespace_from_str(string):
+    string = ' '.join(string.split())
+    string = ' '.join(string.split('\n'))
+
+    return string
 
 
 # TODO: Choose tokenize version (local or imported)
@@ -120,11 +128,17 @@ class SelectClause:
 
         sql_tokens = remove_whitespace(sql_elements[0].tokens)
 
+        print('cccccccccccccccccccccccccccccc')
+        print(sql_tokens)
+
         select_fields = None
 
         for i, item in enumerate(sql_tokens):
             if is_select(item):
                 select_fields = sql_tokens[i+1]
+
+        print('select_fields')
+        print(select_fields)
 
         if type(select_fields) == IdentifierList:
             for identifier in select_fields:
@@ -133,7 +147,7 @@ class SelectClause:
                 if field:
                     fields.append(field)
 
-        elif type(select_fields) == Identifier:
+        elif type(select_fields) in (Identifier, Function, Token):
             identifier = select_fields
             field = get_field_from_identifier(identifier)
 
@@ -453,6 +467,8 @@ class Query(DataSet):
 
         sql_tokens = remove_whitespace(sql_elements[0].tokens)
 
+        from_clause = None
+
         for sql_token in sql_tokens:
             if not sql_token.is_whitespace:
                 if sql_token.value == 'from':
@@ -464,66 +480,67 @@ class Query(DataSet):
                 if start_appending:
                     from_clause_tokens.append(sql_token)
 
-        # Remove 'from' keyword for now
-        from_clause_tokens.pop(0)
+        if from_clause_tokens:
+            # Remove 'from' keyword for now
+            from_clause_tokens.pop(0)
 
-        # Get from_table
-        from_table_name = str(from_clause_tokens.pop(0))
-        from_table = Table(from_table_name)
+            # Get from_table
+            from_table_name = str(from_clause_tokens.pop(0))
+            from_table = Table(from_table_name)
 
-        # Construct joins
-        joins = []
+            # Construct joins
+            joins = []
 
-        kind = None
-        dataset = None
-        comparisons = []
+            kind = None
+            dataset = None
+            comparisons = []
 
-        for item in from_clause_tokens:
-            # Parse join item
-            item_is_join = is_join(item)
+            for item in from_clause_tokens:
+                # Parse join item
+                item_is_join = is_join(item)
 
-            if item_is_join:
-                # Create join object with previously populated values if
-                # applicable, and clear out values for a next one
-                if kind and dataset and comparisons:
-                    join_kind = deepcopy(str(kind))
-                    join_dataset = deepcopy(str(dataset))
-                    join_comparisons = deepcopy(comparisons)
+                if item_is_join:
+                    # Create join object with previously populated values if
+                    # applicable, and clear out values for a next one
+                    if kind and dataset and comparisons:
+                        join_kind = deepcopy(str(kind))
+                        join_dataset = deepcopy(str(dataset))
+                        join_comparisons = deepcopy(comparisons)
 
-                    join = Join(join_kind, join_dataset, join_comparisons)
-                    joins.append(join)
+                        join = Join(join_kind, join_dataset, join_comparisons)
+                        joins.append(join)
 
-                    kind = None
-                    dataset = None
-                    comparisons = []
+                        kind = None
+                        dataset = None
+                        comparisons = []
 
-                kind = get_join_kind(item)
+                    kind = get_join_kind(item)
 
-                continue
+                    continue
 
-            # Parse dataset item
-            item_is_dataset = is_dataset(item)
+                # Parse dataset item
+                item_is_dataset = is_dataset(item)
 
-            if item_is_dataset:
-                dataset = get_dataset(item)
+                if item_is_dataset:
+                    dataset = get_dataset(item)
 
-                continue
+                    continue
 
-            # Parse comparison item
-            item_is_comparison = is_comparison(item)
+                # Parse comparison item
+                item_is_comparison = is_comparison(item)
 
-            if item_is_comparison:
-                comparison = get_comparison(item)
-                comparisons.append(comparison)
+                if item_is_comparison:
+                    comparison = get_comparison(item)
+                    comparisons.append(comparison)
 
-                continue
+                    continue
 
-        # Create the last join
-        if kind and dataset and comparisons:
-            join = Join(kind, dataset, comparisons)
-            joins.append(join)
+            # Create the last join
+            if kind and dataset and comparisons:
+                join = Join(kind, dataset, comparisons)
+                joins.append(join)
 
-        from_clause = FromClause(from_table, joins)
+            from_clause = FromClause(from_table, joins)
 
         return from_clause
 
@@ -560,11 +577,14 @@ class Query(DataSet):
         return where_clause
 
     @property
-    def dataframe(self, db_conn):
-        if not db_conn:
-            db_conn = create_engine('mock_db_str')
+    def db_conn(self):
+        self.db_conn = create_engine('sqlite:///sqlpt/college.db')
 
-        df = pd.read_sql_query(self.sql_str, db_conn)
+        return self.db_conn
+
+    @property
+    def dataframe(self):
+        df = pd.read_sql_query(self.sql_str, self.db_conn)
 
         return df
 
@@ -578,6 +598,19 @@ class Query(DataSet):
 
     def parameterize(self, parameter_fields):
         self.where_clause.parameterize(parameter_fields)
+
+        return self
+
+    def bind_params(self, **kwargs):
+        print('kkkkkkkkkkkkkkkkkkkk')
+        print(kwargs)
+        for key, value in kwargs.items():
+            print(key, value)
+            print(f':{key}', str(value))
+            # TODO: Make modifications so that modifying a query's sql_str
+            #       modifies its components (ie, the where clause object) so
+            #       this will work
+            self.sql_str.replace(f':{key}', str(value))
 
         return self
 
@@ -611,3 +644,42 @@ class SubQuery(Query):
                        f'{self.where_clause})')
 
         return description
+
+
+# ------------------------------
+# bluberry or clear blu or blu flame or blu blazes
+
+@dataclass
+class LogicUnit:
+    name: str
+    query: Query
+    db_source: str
+
+    def run_sql(self):
+        conn = connect(self.db_source)
+        curs = conn.cursor()
+
+        #TODO: Change this to self.query.sql_str() (or property)
+        sql_str = self.query.__str__()
+        print('rrrrrrrrrrrrrrrrrrrrrrrrrr')
+        print(sql_str)
+        curs.execute(sql_str)
+
+        # TODO: Also return scalar "value" results
+        population = curs.fetchall()
+
+        conn.close()
+
+        return population
+
+    def get_population(self):
+        population = self.run_sql()
+
+        return population
+
+    def get_value(self, **kwargs):
+        self.query.bind_params(**kwargs)
+
+        value = self.run_sql()
+
+        return value

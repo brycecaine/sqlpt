@@ -10,3 +10,4 @@ insert into student values (1, 1, 1, 1, 'MATH');
 insert into student values (2, 1, 2, 1, 'MATH');
 insert into student values (3, 2, 1, 1, 'ENGL');
 insert into student values (4, 2, 2, 1, 'ENGL');
+insert into student values (5, 2, 3, 0, 'BIOL');

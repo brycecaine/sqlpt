@@ -23,7 +23,7 @@ def process(db_str, input_dir, output_dir, dry_run):
         with open(filename, 'rt', encoding='utf-8') as sql_file:
             sql_str = sql_file.read()
 
-        incoming_query = sql.Query(sql_str, db_str)
+        incoming_query = sql.Query(sql_str)
 
         formatted_sql = incoming_query.format_sql()
         data_description = incoming_query.dataframe.describe()
