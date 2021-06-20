@@ -1,5 +1,6 @@
 from unittest import TestCase
-from sqlpt.sql import LogicUnit, Query, remove_whitespace_from_str
+from sqlpt.sql import LogicUnit, Query
+from sqlpt.service import remove_whitespace_from_str
 
 
 class FunctionalTestCase(TestCase):
@@ -19,8 +20,7 @@ class FunctionalTestCase(TestCase):
                                       where student_id = student.id), 0)) = 1
             '''
 
-        value_sql_str = remove_whitespace_from_str(
-            self.value_sql_str)
+        value_sql_str = remove_whitespace_from_str(self.value_sql_str)
 
         population_sql_str = remove_whitespace_from_str(
             self.population_sql_str)

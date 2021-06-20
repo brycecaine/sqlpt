@@ -1,47 +1,13 @@
 from sqlite3 import connect
-import re
 from copy import deepcopy
 from dataclasses import dataclass
-from tokenize import tokenize
 
 import pandas as pd
 import sqlparse
 from sqlalchemy import create_engine
 from sqlparse.sql import Comparison as SQLParseComparison
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Function, Token, Where
-
-
-def remove_whitespace(token_list):
-    tokens = [x for x in token_list if not x.is_whitespace]
-
-    return tokens
-
-
-def remove_whitespace_from_str(string):
-    string = ' '.join(string.split())
-    string = ' '.join(string.split('\n'))
-
-    return string
-
-
-# TODO: Choose tokenize version (local or imported)
-def tokenize(sql_str):
-    sql = sqlparse.parse(sql_str)
-    all_tokens = sql[0].tokens
-    tokens = remove_whitespace(all_tokens)
-
-    return tokens
-
-
-def get_function_from_statement(statement):
-    match = re.match('.+\(.*\)', statement)
-
-    function_str = ''
-
-    if match:
-        function_str = match.group()
-
-    return function_str
+from sqlpt.service import remove_whitespace, get_function_from_statement
 
 
 @dataclass
@@ -71,7 +37,10 @@ class Table(DataSet):
 def get_field_from_identifier(identifier):
     field = None
 
+    print('iiiiiiiiiiiiiiii')
+    print(identifier)
     field_statement = str(identifier)
+    print(str(identifier))
 
     if field_statement not in (',', ' ', '\n'):
         function_str = get_function_from_statement(field_statement)
@@ -552,6 +521,7 @@ def get_where_clause(sql_str):
     where_clause = WhereClause(comparisons)
 
     return where_clause
+
 
 @dataclass
 class Query(DataSet):
