@@ -34,28 +34,36 @@ class Table(DataSet):
         return equivalent
 
 
-def get_field_from_identifier(identifier):
-    field = None
+def get_field_expression(field_str):
+    field_expression = ''
 
-    print('iiiiiiiiiiiiiiii')
-    print(identifier)
-    field_statement = str(identifier)
-    print(str(identifier))
-
-    if field_statement not in (',', ' ', '\n'):
-        function_str = get_function_from_statement(field_statement)
+    if field_str not in (',', ' ', '\n'):
+        function_str = get_function_from_statement(field_str)
 
         if function_str:
             field_expression = function_str
-            field_alias = (
-                field_statement.replace(function_str, '')
-                                .replace(' as ', '')
-                                .replace(' AS ', '')
-                                .replace(' ', ''))
 
         else:
-            field_statement_elements = field_statement.rsplit(' ', 1)
+            field_statement_elements = field_str.rsplit(' ', 1)
             field_expression = field_statement_elements[0]
+
+    return field_expression
+
+
+def get_field_alias(field_str):
+    field_alias = ''
+
+    if field_str not in (',', ' ', '\n'):
+        function_str = get_function_from_statement(field_str)
+
+        if function_str:
+            field_alias = (field_str.replace(function_str, '')
+                                    .replace(' as ', '')
+                                    .replace(' AS ', '')
+                                    .replace(' ', ''))
+
+        else:
+            field_statement_elements = field_str.rsplit(' ', 1)
 
             if len(field_statement_elements) > 1:
                 field_alias = field_statement_elements[1]
@@ -63,24 +71,58 @@ def get_field_from_identifier(identifier):
             else:
                 field_alias = ''
 
-        field = Field(field_expression, field_alias)
-
-    return field
+    return field_alias
 
 
 @dataclass
 class Field:
+    field_str: str
     expression: str
     alias: str
 
     def __hash__(self):
         return hash(str(self))
 
+    def __init__(self, field_str):
+        self.field_str = field_str
+        self.expression = get_field_expression(field_str)
+        self.alias = get_field_alias(field_str)
+
     def __str__(self):
         alias = f' {self.alias}' if self.alias else ''
         description = f'{self.expression}{alias}'
 
         return description
+
+
+def get_fields(select_clause_str):
+    fields = []
+
+    sql_elements = sqlparse.parse(select_clause_str)
+
+    sql_tokens = remove_whitespace(sql_elements[0].tokens)
+
+    select_fields = None
+
+    for i, item in enumerate(sql_tokens):
+        if is_select(item):
+            select_fields = sql_tokens[i+1]
+
+    if type(select_fields) == IdentifierList:
+        for identifier in select_fields:
+            field = Field(str(identifier))
+
+            if field:
+                fields.append(field)
+
+    elif type(select_fields) in (Identifier, Function, Token):
+        identifier = select_fields
+        field = Field(str(identifier))
+
+        if field:
+            fields.append(field)
+
+    return fields
 
 
 @dataclass
@@ -91,33 +133,7 @@ class SelectClause:
         return hash(str(self))
 
     def __init__(self, select_clause_str):
-        fields = []
-
-        sql_elements = sqlparse.parse(select_clause_str)
-
-        sql_tokens = remove_whitespace(sql_elements[0].tokens)
-
-        select_fields = None
-
-        for i, item in enumerate(sql_tokens):
-            if is_select(item):
-                select_fields = sql_tokens[i+1]
-
-        if type(select_fields) == IdentifierList:
-            for identifier in select_fields:
-                field = get_field_from_identifier(identifier)
-
-                if field:
-                    fields.append(field)
-
-        elif type(select_fields) in (Identifier, Function, Token):
-            identifier = select_fields
-            field = get_field_from_identifier(identifier)
-
-            if field:
-                fields.append(field)
-
-        self.fields = fields
+        self.fields = get_fields(select_clause_str)
 
     def __str__(self):
         select_clause_str = ''
