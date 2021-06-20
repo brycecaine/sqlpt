@@ -128,17 +128,11 @@ class SelectClause:
 
         sql_tokens = remove_whitespace(sql_elements[0].tokens)
 
-        print('cccccccccccccccccccccccccccccc')
-        print(sql_tokens)
-
         select_fields = None
 
         for i, item in enumerate(sql_tokens):
             if is_select(item):
                 select_fields = sql_tokens[i+1]
-
-        print('select_fields')
-        print(select_fields)
 
         if type(select_fields) == IdentifierList:
             for identifier in select_fields:
@@ -436,145 +430,151 @@ def get_comparison(item):
     return comparison
 
 
+def get_select_clause(sql_str):
+    select_clause = SelectClause(sql_str)
+
+    return select_clause
+
+
+def get_from_clause(sql_str):
+    sql_elements = sqlparse.parse(sql_str)
+
+    start_appending = False
+    from_clause_tokens = []
+
+    sql_tokens = remove_whitespace(sql_elements[0].tokens)
+
+    from_clause = None
+
+    for sql_token in sql_tokens:
+        if not sql_token.is_whitespace:
+            if sql_token.value == 'from':
+                start_appending = True
+
+            if sql_token.value[:5] == 'where':
+                start_appending = False
+
+            if start_appending:
+                from_clause_tokens.append(sql_token)
+
+    if from_clause_tokens:
+        # Remove 'from' keyword for now
+        from_clause_tokens.pop(0)
+
+        # Get from_table
+        from_table_name = str(from_clause_tokens.pop(0))
+        from_table = Table(from_table_name)
+
+        # Construct joins
+        joins = []
+
+        kind = None
+        dataset = None
+        comparisons = []
+
+        for item in from_clause_tokens:
+            # Parse join item
+            item_is_join = is_join(item)
+
+            if item_is_join:
+                # Create join object with previously populated values if
+                # applicable, and clear out values for a next one
+                if kind and dataset and comparisons:
+                    join_kind = deepcopy(str(kind))
+                    join_dataset = deepcopy(str(dataset))
+                    join_comparisons = deepcopy(comparisons)
+
+                    join = Join(join_kind, join_dataset, join_comparisons)
+                    joins.append(join)
+
+                    kind = None
+                    dataset = None
+                    comparisons = []
+
+                kind = get_join_kind(item)
+
+                continue
+
+            # Parse dataset item
+            item_is_dataset = is_dataset(item)
+
+            if item_is_dataset:
+                dataset = get_dataset(item)
+
+                continue
+
+            # Parse comparison item
+            item_is_comparison = is_comparison(item)
+
+            if item_is_comparison:
+                comparison = get_comparison(item)
+                comparisons.append(comparison)
+
+                continue
+
+        # Create the last join
+        if kind and dataset and comparisons:
+            join = Join(kind, dataset, comparisons)
+            joins.append(join)
+
+        from_clause = FromClause(from_table, joins)
+
+    return from_clause
+
+
+def get_where_clause(sql_str):
+    sql_elements = sqlparse.parse(sql_str)
+
+    comparisons = []
+
+    for sql_token in sql_elements[0].tokens:
+        if type(sql_token) == Where:
+            where_tokens = sql_token.tokens
+
+            for where_token in where_tokens:
+                if type(where_token) == SQLParseComparison:
+                    comparison_tokens = remove_whitespace(
+                        where_token.tokens)
+
+                    for i, c_token in enumerate(comparison_tokens):
+                        if type(c_token) in (Identifier, Parenthesis):
+                            left_expression = c_token.value
+                            operator = comparison_tokens[i+1].value
+                            right_expression = comparison_tokens[i+2].value
+
+                            comparison = Comparison(
+                                left_expression, operator,
+                                right_expression)
+
+                            comparisons.append(comparison)
+                            break
+
+    where_clause = WhereClause(comparisons)
+
+    return where_clause
+
 @dataclass
 class Query(DataSet):
     sql_str: str
+    select_clause: SelectClause
+    from_clause: FromClause
+    where_clause: WhereClause
 
     def __hash__(self):
         return hash(str(self))
 
+    def __init__(self, sql_str):
+        self.sql_str = sql_str
+        self.select_clause = get_select_clause(sql_str)
+        self.from_clause = get_from_clause(sql_str)
+        self.where_clause = get_where_clause(sql_str)
+
     def __str__(self):
-        description = (f'{self.select_clause} {self.from_clause} '
-                       f'{self.where_clause}')
+        string = (f'{self.select_clause} {self.from_clause} '
+                  f'{self.where_clause}')
 
-        return description
+        return string
 
-    @property
-    def select_clause(self):
-        # TODO: Extract select_clause_str from sql_str
-        select_clause = SelectClause(self.sql_str)
-
-        return select_clause
-
-    # TODO: Move these assignment methods to their respective class __init__()
-    # methods
-    @property
-    def from_clause(self):
-        sql_elements = sqlparse.parse(self.sql_str)
-
-        start_appending = False
-        from_clause_tokens = []
-
-        sql_tokens = remove_whitespace(sql_elements[0].tokens)
-
-        from_clause = None
-
-        for sql_token in sql_tokens:
-            if not sql_token.is_whitespace:
-                if sql_token.value == 'from':
-                    start_appending = True
-
-                if sql_token.value[:5] == 'where':
-                    start_appending = False
-
-                if start_appending:
-                    from_clause_tokens.append(sql_token)
-
-        if from_clause_tokens:
-            # Remove 'from' keyword for now
-            from_clause_tokens.pop(0)
-
-            # Get from_table
-            from_table_name = str(from_clause_tokens.pop(0))
-            from_table = Table(from_table_name)
-
-            # Construct joins
-            joins = []
-
-            kind = None
-            dataset = None
-            comparisons = []
-
-            for item in from_clause_tokens:
-                # Parse join item
-                item_is_join = is_join(item)
-
-                if item_is_join:
-                    # Create join object with previously populated values if
-                    # applicable, and clear out values for a next one
-                    if kind and dataset and comparisons:
-                        join_kind = deepcopy(str(kind))
-                        join_dataset = deepcopy(str(dataset))
-                        join_comparisons = deepcopy(comparisons)
-
-                        join = Join(join_kind, join_dataset, join_comparisons)
-                        joins.append(join)
-
-                        kind = None
-                        dataset = None
-                        comparisons = []
-
-                    kind = get_join_kind(item)
-
-                    continue
-
-                # Parse dataset item
-                item_is_dataset = is_dataset(item)
-
-                if item_is_dataset:
-                    dataset = get_dataset(item)
-
-                    continue
-
-                # Parse comparison item
-                item_is_comparison = is_comparison(item)
-
-                if item_is_comparison:
-                    comparison = get_comparison(item)
-                    comparisons.append(comparison)
-
-                    continue
-
-            # Create the last join
-            if kind and dataset and comparisons:
-                join = Join(kind, dataset, comparisons)
-                joins.append(join)
-
-            from_clause = FromClause(from_table, joins)
-
-        return from_clause
-
-    @property
-    def where_clause(self):
-        sql_elements = sqlparse.parse(self.sql_str)
-
-        comparisons = []
-
-        for sql_token in sql_elements[0].tokens:
-            if type(sql_token) == Where:
-                where_tokens = sql_token.tokens
-
-                for where_token in where_tokens:
-                    if type(where_token) == SQLParseComparison:
-                        comparison_tokens = remove_whitespace(
-                            where_token.tokens)
-
-                        for i, c_token in enumerate(comparison_tokens):
-                            if type(c_token) == Identifier:
-                                left_expression = c_token.value
-                                operator = comparison_tokens[i+1].value
-                                right_expression = comparison_tokens[i+2].value
-
-                                comparison = Comparison(
-                                    left_expression, operator,
-                                    right_expression)
-
-                                comparisons.append(comparison)
-                                break
-
-        where_clause = WhereClause(comparisons)
-
-        return where_clause
 
     @property
     def db_conn(self):
@@ -602,15 +602,9 @@ class Query(DataSet):
         return self
 
     def bind_params(self, **kwargs):
-        print('kkkkkkkkkkkkkkkkkkkk')
-        print(kwargs)
         for key, value in kwargs.items():
-            print(key, value)
-            print(f':{key}', str(value))
-            # TODO: Make modifications so that modifying a query's sql_str
-            #       modifies its components (ie, the where clause object) so
-            #       this will work
-            self.sql_str.replace(f':{key}', str(value))
+            bound_sql_str = self.sql_str.replace(f':{key}', str(value))
+            self.__init__(bound_sql_str)
 
         return self
 
@@ -659,18 +653,18 @@ class LogicUnit:
         conn = connect(self.db_source)
         curs = conn.cursor()
 
-        #TODO: Change this to self.query.sql_str() (or property)
+        # TODO: Change this to self.query.sql_str() (or property)
         sql_str = self.query.__str__()
-        print('rrrrrrrrrrrrrrrrrrrrrrrrrr')
-        print(sql_str)
         curs.execute(sql_str)
 
-        # TODO: Also return scalar "value" results
-        population = curs.fetchall()
+        result = curs.fetchall()
+
+        if not self.query.from_clause:  # Scalar result
+            result = result[0][0]
 
         conn.close()
 
-        return population
+        return result
 
     def get_population(self):
         population = self.run_sql()
