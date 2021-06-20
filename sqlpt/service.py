@@ -175,10 +175,20 @@ def is_conjunction(item):
     return item_is_conjunction
 
 
-def is_comparison(item):
+def is_sqlparse_comparison(item):
     item_is_comparison = False
 
     if type(item) == SQLParseComparison:
         item_is_comparison = True
 
     return item_is_comparison
+
+
+def get_join_kind(item):
+    join_kind = 'join'
+
+    if type(item) == Token and 'left' in str(item).lower():
+        join_kind = 'left join'
+
+    return join_kind
+
