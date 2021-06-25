@@ -43,7 +43,7 @@ class FunctionalTestCase(TestCase):
                        query=self.population_query,
                        db_source='college.db')
 
-        actual_result = rs.get_population()
+        actual_result = rs.get_result()
         expected_result = [
             (1, 1, '1', 1, 'MATH'),
             (2, 1, '2', 1, 'MATH'),

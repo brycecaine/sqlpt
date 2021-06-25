@@ -518,8 +518,3 @@ class LogicUnit(DatabaseQuery):
 @dataclass
 class RecordSet(DatabaseQuery):
     name: str
-
-    def get_population(self):
-        result = self.get_result()
-
-        return result
