@@ -478,15 +478,14 @@ class SubQuery(Query):
 
 
 # ------------------------------
-# bluberry or clear blu or blu flame or blu blazes
+# Below is logic for bluberry or clear blu or blu flame or blu blazes
 
 @dataclass
-class LogicUnit:
-    name: str
+class DatabaseQuery:
     query: Query
     db_source: str
 
-    def run_sql(self):
+    def get_result(self):
         conn = connect(self.db_source)
         curs = conn.cursor()
 
@@ -496,21 +495,31 @@ class LogicUnit:
 
         result = curs.fetchall()
 
-        if not self.query.from_clause.from_table:  # Scalar result
-            result = result[0][0]
-
         conn.close()
 
         return result
 
-    def get_population(self):
-        population = self.run_sql()
 
-        return population
+@dataclass
+class LogicUnit(DatabaseQuery):
+    name: str
 
     def get_value(self, **kwargs):
         self.query.bind_params(**kwargs)
 
-        value = self.run_sql()
+        result = self.get_result()
 
-        return value
+        # if not self.query.from_clause.from_table:  # Scalar result
+        result = result[0][0]
+
+        return result
+
+
+@dataclass
+class RecordSet(DatabaseQuery):
+    name: str
+
+    def get_population(self):
+        result = self.get_result()
+
+        return result

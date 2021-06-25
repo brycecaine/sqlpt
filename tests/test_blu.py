@@ -1,5 +1,5 @@
 from unittest import TestCase
-from sqlpt.sql import LogicUnit, Query
+from sqlpt.sql import LogicUnit, Query, RecordSet
 from sqlpt.service import remove_whitespace_from_str
 
 
@@ -32,18 +32,18 @@ class FunctionalTestCase(TestCase):
         lu = LogicUnit(name='Registered Student',
                        query=self.value_query,
                        db_source='college.db')
-        
+
         actual_result = lu.get_value(student_id=1)
         expected_result = 1
 
         self.assertEqual(actual_result, expected_result)
 
     def test_population_of_logic_unit(self):
-        lu = LogicUnit(name='Registered Student',
+        rs = RecordSet(name='Registered Student',
                        query=self.population_query,
                        db_source='college.db')
 
-        actual_result = lu.get_population()
+        actual_result = rs.get_population()
         expected_result = [
             (1, 1, '1', 1, 'MATH'),
             (2, 1, '2', 1, 'MATH'),
