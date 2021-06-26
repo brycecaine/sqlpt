@@ -183,7 +183,7 @@ class FromClause:
 
             # Get from_table
             from_table_name = str(from_clause_tokens.pop(0))
-            # TODO: Handle subquery here; it will be a Parenthesis object
+            # May need to handle subquery here; it will be a Parenthesis object
             from_table = Table(from_table_name)
 
             # Construct joins
@@ -263,10 +263,9 @@ class FromClause:
 
 @dataclass
 class Comparison:
-    # TODO: Figure out a new name for "expression" (maybe "value"?)
-    left_expression: str
+    left_term: str
     operator: str
-    right_expression: str
+    right_term: str
 
     def __hash__(self):
         return hash(str(self))
@@ -281,9 +280,9 @@ class Comparison:
         for comparison_token in comparison_tokens:
             token_str_list.append(comparison_token.value)
 
-        self.left_expression = token_str_list[0]
+        self.left_term = token_str_list[0]
         self.operator = token_str_list[1]
-        self.right_expression = token_str_list[2]
+        self.right_term = token_str_list[2]
 
         """ TODO: See if this is needed (where_token is a SQLParseComparison):
         comparison_tokens = remove_whitespace(
@@ -291,13 +290,11 @@ class Comparison:
 
         for i, c_token in enumerate(comparison_tokens):
             if type(c_token) in (Identifier, Parenthesis):
-                left_expression = c_token.value
+                left_term = c_token.value
                 operator = comparison_tokens[i+1].value
-                right_expression = comparison_tokens[i+2].value
+                right_term = comparison_tokens[i+2].value
 
-                comparison = Comparison(
-                    left_expression, operator,
-                    right_expression)
+                comparison = Comparison(left_term, operator, right_term)
 
                 comparisons.append(comparison)
                 break
@@ -311,8 +308,8 @@ class Comparison:
                 operator_equivalent = self.operator == other.operator
 
                 expressions_equivalent = (
-                    {self.left_expression, self.right_expression} ==
-                    {other.left_expression, other.right_expression})
+                    {self.left_term, self.right_term} ==
+                    {other.left_term, other.right_term})
 
             if operator_equivalent and expressions_equivalent:
                 equivalent = True
@@ -321,7 +318,7 @@ class Comparison:
 
     def __str__(self):
         comparison_str = (
-            f'{self.left_expression} {self.operator} {self.right_expression}')
+            f'{self.left_term} {self.operator} {self.right_term}')
 
         return comparison_str
 
@@ -373,21 +370,19 @@ class WhereClause:
 
     def parameterize(self, parameter_fields):
         for comparison in self.comparisons:
-            left_expression = comparison.left_expression
+            left_term = comparison.left_term
 
-            if left_expression in parameter_fields:
-                comparison.right_expression = f':{left_expression}'
+            if left_term in parameter_fields:
+                comparison.right_term = f':{left_term}'
 
         return self
 
     def fuse(self, where_clause):
         for self_comparison in self.comparisons:
             for other_comparison in where_clause.comparisons:
-                if (self_comparison.left_expression ==
-                        other_comparison.left_expression):
-                    # TODO: Left off here
-                    # TODO: What to do with inequalities
-                    # right_expression_list.append
+                if self_comparison.left_term == other_comparison.left_term:
+                    # TODO: Figure out what to do with inequalities
+                    # right_term_list.append
                     pass
 
         return self
@@ -498,7 +493,6 @@ class DatabaseQuery:
         conn = connect(self.db_source)
         curs = conn.cursor()
 
-        # TODO: Change this to self.query.sql_str() (or property)
         sql_str = self.query.__str__()
         curs.execute(sql_str)
 
