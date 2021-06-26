@@ -183,6 +183,7 @@ class FromClause:
 
             # Get from_table
             from_table_name = str(from_clause_tokens.pop(0))
+            # TODO: Handle subquery here; it will be a Parenthesis object
             from_table = Table(from_table_name)
 
             # Construct joins
@@ -225,7 +226,7 @@ class FromClause:
                 item_is_sqlparse_comparison = is_sqlparse_comparison(item)
 
                 if item_is_sqlparse_comparison:
-                    comparison = Comparison(item)
+                    comparison = Comparison(item.__str__())
                     comparisons.append(comparison)
 
                     continue
@@ -270,9 +271,11 @@ class Comparison:
     def __hash__(self):
         return hash(str(self))
 
-    def __init__(self, sqlparse_comparison):
+    def __init__(self, comparison_str):
         token_str_list = []
 
+        statement = sqlparse.parse(comparison_str)
+        sqlparse_comparison = statement[0].tokens[0]
         comparison_tokens = remove_whitespace(sqlparse_comparison.tokens)
 
         for comparison_token in comparison_tokens:
@@ -341,7 +344,7 @@ class WhereClause:
 
                 for where_token in where_tokens:
                     if type(where_token) == SQLParseComparison:
-                        comparison = Comparison(where_token)
+                        comparison = Comparison(where_token.__str__())
                         comparisons.append(comparison)
 
         self.comparisons = comparisons
@@ -389,9 +392,15 @@ class WhereClause:
 
         return self
 
+    def add_comparison(self, comparison_str):
+        comparison = Comparison(comparison_str)
+        self.comparisons.append(comparison)
+
 
 @dataclass
 class Query(DataSet):
+    # TODO: Decide if sql_str is needed here; if so, make sure it always
+    # reflects what's in the clauses
     sql_str: str
     select_clause: SelectClause
     from_clause: FromClause
@@ -440,7 +449,7 @@ class Query(DataSet):
 
     def bind_params(self, **kwargs):
         for key, value in kwargs.items():
-            bound_sql_str = self.sql_str.replace(f':{key}', str(value))
+            bound_sql_str = self.__str__().replace(f':{key}', str(value))
             self.__init__(bound_sql_str)
 
         return self
@@ -510,11 +519,19 @@ class LogicUnit(DatabaseQuery):
         result = self.get_result()
 
         # if not self.query.from_clause.from_table:  # Scalar result
-        result = result[0][0]
+        value = result[0][0]
 
-        return result
+        return value
 
 
 @dataclass
 class RecordSet(DatabaseQuery):
     name: str
+
+    # TODO: Rename this to no longer use 'population'
+    def get_population(self, **kwargs):
+        self.query.bind_params(**kwargs)
+
+        population = self.get_result()
+
+        return population
