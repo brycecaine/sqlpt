@@ -6,10 +6,14 @@ import pandas as pd
 import sqlparse
 from sqlalchemy import create_engine
 from sqlparse.sql import Comparison as SQLParseComparison
-from sqlparse.sql import Identifier as SQLParseIdentifier, Parenthesis as SQLParseParenthesis, Token, Where
+from sqlparse.sql import Identifier as SQLParseIdentifier
+from sqlparse.sql import Parenthesis as SQLParseParenthesis
+from sqlparse.sql import Where
 
 from sqlpt.service import (get_field_alias, get_field_expression,
-                           is_join, is_dataset, is_sqlparse_comparison, get_field_strs, is_equivalent, remove_whitespace)
+                           get_field_strs, is_dataset, is_equivalent, is_join,
+                           is_sqlparse_comparison, remove_whitespace,
+                           remove_whitespace_from_str)
 
 
 @dataclass
@@ -24,7 +28,7 @@ class Identifier(SQLParseIdentifier):
 class Parenthesis(SQLParseParenthesis):
     def get_dataset(self):
         sql_str = str(self)[1:-1]
-        dataset = SubQuery(sql_str)
+        dataset = Query(sql_str)
 
         return dataset
 
@@ -270,19 +274,22 @@ class Comparison:
     def __hash__(self):
         return hash(str(self))
 
-    def __init__(self, comparison_str):
-        token_str_list = []
+    def __init__(self, *args):
+        if len(args) == 1:
+            comparison_str = args[0]
+            statement = sqlparse.parse(comparison_str)
+            sqlparse_comparison = statement[0].tokens[0]
+            comparison_tokens = remove_whitespace(sqlparse_comparison.tokens)
 
-        statement = sqlparse.parse(comparison_str)
-        sqlparse_comparison = statement[0].tokens[0]
-        comparison_tokens = remove_whitespace(sqlparse_comparison.tokens)
+            elements = [comparison_token.value
+                        for comparison_token in comparison_tokens]
 
-        for comparison_token in comparison_tokens:
-            token_str_list.append(comparison_token.value)
+        elif len(args) == 3:
+            elements = args
 
-        self.left_term = token_str_list[0]
-        self.operator = token_str_list[1]
-        self.right_term = token_str_list[2]
+        self.left_term = elements[0]
+        self.operator = elements[1]
+        self.right_term = elements[2]
 
         """ TODO: See if this is needed (where_token is a SQLParseComparison):
         comparison_tokens = remove_whitespace(
@@ -317,10 +324,9 @@ class Comparison:
         return equivalent
 
     def __str__(self):
-        comparison_str = (
-            f'{self.left_term} {self.operator} {self.right_term}')
+        string = f'{self.left_term} {self.operator} {self.right_term}'
 
-        return comparison_str
+        return string
 
 
 @dataclass
@@ -387,8 +393,7 @@ class WhereClause:
 
         return self
 
-    def add_comparison(self, comparison_str):
-        comparison = Comparison(comparison_str)
+    def add_comparison(self, comparison):
         self.comparisons.append(comparison)
 
 
@@ -402,6 +407,8 @@ class Query(DataSet):
         return hash(str(self))
 
     def __init__(self, sql_str):
+        sql_str = remove_whitespace_from_str(sql_str)
+
         self.select_clause = SelectClause(sql_str)
         self.from_clause = FromClause(sql_str)
         self.where_clause = WhereClause(sql_str)
@@ -467,14 +474,15 @@ class Query(DataSet):
     def output_data_file(self, path):
         self.dataframe.to_csv(path, index=False)
 
+    def subquery_str(self):
+        string = f'({self.__str__()})'
 
-@dataclass
-class SubQuery(Query):
-    def __str__(self):
-        description = (f'({self.select_clause} {self.from_clause} '
-                       f'{self.where_clause})')
+        return string
 
-        return description
+    def filter_by_subquery(self, subquery_str, operator, value):
+        comparison = Comparison(subquery_str, operator, value)
+
+        self.where_clause.add_comparison(comparison)
 
 
 # ------------------------------
@@ -521,3 +529,7 @@ class RecordSet(DatabaseQuery):
         data = self.get_results()
 
         return data
+
+    def filter_by_logic_unit(self, logic_unit, operator, value):
+        subquery_str = logic_unit.query.subquery_str()
+        self.query.filter_by_subquery(subquery_str, operator, value)
