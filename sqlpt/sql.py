@@ -485,7 +485,7 @@ class DatabaseQuery:
     query: Query
     db_source: str
 
-    def get_result(self):
+    def get_results(self):
         conn = connect(self.db_source)
         curs = conn.cursor()
 
@@ -506,10 +506,7 @@ class LogicUnit(DatabaseQuery):
     def get_value(self, **kwargs):
         self.query.bind_params(**kwargs)
 
-        result = self.get_result()
-
-        # if not self.query.from_clause.from_table:  # Scalar result
-        value = result[0][0]
+        value = self.get_results()[0][0]
 
         return value
 
@@ -518,10 +515,9 @@ class LogicUnit(DatabaseQuery):
 class RecordSet(DatabaseQuery):
     name: str
 
-    # TODO: Rename this to no longer use 'population'
-    def get_population(self, **kwargs):
+    def get_data(self, **kwargs):
         self.query.bind_params(**kwargs)
 
-        population = self.get_result()
+        data = self.get_results()
 
-        return population
+        return data

@@ -12,7 +12,7 @@ class FunctionalTestCase(TestCase):
                               where student_id = :student_id), 0)
             '''
 
-        self.population_sql_str = '''
+        self.record_set_sql_str = '''
             select *
               from student
             '''
@@ -30,19 +30,19 @@ class FunctionalTestCase(TestCase):
 
         self.assertEqual(actual_result, expected_result)
 
-    def test_population_of_logic_unit(self):
-        population_sql_str = remove_whitespace_from_str(
-            self.population_sql_str)
+    def test_record_set_with_logic_unit(self):
+        record_set_sql_str = remove_whitespace_from_str(
+            self.record_set_sql_str)
 
-        population_query = Query(population_sql_str)
+        record_set_query = Query(record_set_sql_str)
         subquery_str = (
             ' '.join(self.value_sql_str.strip().replace('\n', '').split()))
-        population_query.where_clause.add_comparison(f'({subquery_str}) = 1')
-        rs = RecordSet(name='Registered Student',
-                       query=population_query,
+        record_set_query.where_clause.add_comparison(f'({subquery_str}) = 1')
+        rs = RecordSet(name='Registered Students',
+                       query=record_set_query,
                        db_source='college.db')
 
-        actual_result = rs.get_population(student_id='student.id')
+        actual_result = rs.get_data(student_id='student.id')
         expected_result = [
             (1, 1, '1', 1, 'MATH'),
             (2, 1, '2', 1, 'MATH'),
