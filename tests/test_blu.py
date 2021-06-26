@@ -21,11 +21,11 @@ class FunctionalTestCase(TestCase):
         value_sql_str = remove_whitespace_from_str(self.value_sql_str)
         self.value_query = Query(value_sql_str)
 
-        lu = LogicUnit(name='Registered Student',
-                       query=self.value_query,
-                       db_source='college.db')
+        logic_unit = LogicUnit(name='Registered Student',
+                               query=self.value_query,
+                               db_source='college.db')
 
-        actual_result = lu.get_value(student_id=1)
+        actual_result = logic_unit.get_value(student_id=1)
         expected_result = 1
 
         self.assertEqual(actual_result, expected_result)
@@ -38,11 +38,11 @@ class FunctionalTestCase(TestCase):
         subquery_str = (
             ' '.join(self.value_sql_str.strip().replace('\n', '').split()))
         record_set_query.where_clause.add_comparison(f'({subquery_str}) = 1')
-        rs = RecordSet(name='Registered Students',
-                       query=record_set_query,
-                       db_source='college.db')
+        record_set = RecordSet(name='Registered Students',
+                               query=record_set_query,
+                               db_source='college.db')
 
-        actual_result = rs.get_data(student_id='student.id')
+        actual_result = record_set.get_data(student_id='student.id')
         expected_result = [
             (1, 1, '1', 1, 'MATH'),
             (2, 1, '2', 1, 'MATH'),
