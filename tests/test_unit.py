@@ -12,10 +12,10 @@ class QueryTestCase(TestCase):
 
     def test_fields(self):
         expected_fields = [
-            Field(expression='a', alias='name'),
-            Field(expression='b', alias=''),
-            Field(expression='fn(id, dob)', alias='age'),
-            Field(expression='fn(id, height)', alias=''),
+            Field('a', 'name'),
+            Field('b', ''),
+            Field('fn(id, dob)', 'age'),
+            Field('fn(id, height)', ''),
         ]
         actual_fields = self.query.select_clause.fields
 
@@ -27,7 +27,8 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_fields[3]), 'fn(id, height)')
 
     def test_select_clause(self):
-        expected_select_clause_str = 'select a name, b, fn(id, dob) age, fn(id, height)'
+        expected_select_clause_str = (
+            'select a name, b, fn(id, dob) age, fn(id, height)')
         expected_select_clause = SelectClause(expected_select_clause_str)
         actual_select_clause = self.query.select_clause
 
@@ -39,9 +40,7 @@ class QueryTestCase(TestCase):
             Join(
                 kind='join',
                 dataset=Table(name='d'),
-                comparisons=[Comparison(left_expression='e',
-                                        operator='=',
-                                        right_expression='f')]
+                comparisons=[Comparison('e', '=', 'f')]
             )
         ]
 
@@ -56,9 +55,7 @@ class QueryTestCase(TestCase):
             Join(
                 kind='join',
                 dataset=Table(name='d'),
-                comparisons=[Comparison(left_expression='e',
-                                        operator='=',
-                                        right_expression='f')]
+                comparisons=[Comparison('e', '=', 'f')]
             )
         ]
 
@@ -72,8 +69,8 @@ class QueryTestCase(TestCase):
 
     def test_where_clause(self):
         comparisons = [
-            Comparison(left_expression='g', operator='=', right_expression='h'),
-            Comparison(left_expression='i', operator='=', right_expression='j'),
+            Comparison('g', '=', 'h'),
+            Comparison('i', '=', 'j'),
         ]
         expected_where_clause = WhereClause(comparisons)
         actual_where_clause = self.query.where_clause
@@ -118,10 +115,12 @@ class ComplexQueryTestCase(TestCase):
 
         self.assertEqual(actual_query, expected_query)
 
-        actual_query_str = str(actual_query).replace(' ', '').replace('\n', '')
-        expected_query_str = self.sql_str.replace(' ', '').replace('\n', '')
-
-        self.assertEqual(actual_query_str, expected_query_str)
+        expected_query_str = (
+            "select a name, b, fn(id, dob) age, fn(id, height), (select c1 "
+            "from a1 where a1.b1 = b) c1 from c join d on e = f left join "
+            "select shape from k where kind = 'quadrilateral' on l = m and n "
+            "= o where g = h and i = j")
+        self.assertEqual(actual_query.__str__(), expected_query_str)
 
 
 class EquivalenceTestCase(TestCase):
@@ -158,16 +157,14 @@ class EquivalenceTestCase(TestCase):
         self.assertTrue(equivalent_2)
 
     def test_query_from_clause_equivalence_1(self):
-        equivalent_1 = self.query_1.from_clause.is_equivalent_to(
-            self.query_2.from_clause)
+        self.query_1.from_clause.is_equivalent_to(self.query_2.from_clause)
 
         # TODO: Work on from-clause equivalence
         # self.assertTrue(equivalent_1)
         self.assertTrue(True)
 
     def test_query_from_clause_equivalence_2(self):
-        equivalent_2 = self.query_2.from_clause.is_equivalent_to(
-            self.query_1.from_clause)
+        self.query_2.from_clause.is_equivalent_to(self.query_1.from_clause)
 
         # TODO: Work on from-clause equivalence
         # self.assertTrue(equivalent_2)

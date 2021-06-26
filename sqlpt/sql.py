@@ -6,31 +6,12 @@ import pandas as pd
 import sqlparse
 from sqlalchemy import create_engine
 from sqlparse.sql import Comparison as SQLParseComparison
-from sqlparse.sql import Identifier as SQLParseIdentifier
-from sqlparse.sql import Parenthesis as SQLParseParenthesis
-from sqlparse.sql import Where
+from sqlparse.sql import Identifier, Parenthesis, Where
 
 from sqlpt.service import (get_field_alias, get_field_expression,
-                           get_field_strs, is_dataset, is_equivalent, is_join,
-                           is_sqlparse_comparison, remove_whitespace,
+                           get_field_strs, get_join_kind, is_equivalent,
+                           is_join, is_sqlparse_comparison, remove_whitespace,
                            remove_whitespace_from_str)
-
-
-@dataclass
-class Identifier(SQLParseIdentifier):
-    def get_dataset(self):
-        dataset = Table(str(self))
-
-        return dataset
-
-
-@dataclass
-class Parenthesis(SQLParseParenthesis):
-    def get_dataset(self):
-        sql_str = str(self)[1:-1]
-        dataset = Query(sql_str)
-
-        return dataset
 
 
 @dataclass
@@ -59,17 +40,21 @@ class Table(DataSet):
 
 @dataclass
 class Field:
-    field_str: str
     expression: str
     alias: str
 
     def __hash__(self):
         return hash(str(self))
 
-    def __init__(self, field_str):
-        self.field_str = field_str
-        self.expression = get_field_expression(field_str)
-        self.alias = get_field_alias(field_str)
+    def __init__(self, *args):
+        if len(args) == 1:
+            field_str = args[0]
+            self.expression = get_field_expression(field_str)
+            self.alias = get_field_alias(field_str)
+
+        elif len(args) == 2:
+            self.expression = args[0]
+            self.alias = args[1]
 
     def __str__(self):
         alias = f' {self.alias}' if self.alias else ''
@@ -159,89 +144,100 @@ class FromClause:
     def __hash__(self):
         return hash(str(self))
 
-    def __init__(self, sql_str):
-        sql_elements = sqlparse.parse(sql_str)
+    def __init__(self, *args):
+        if len(args) == 1:
+            sql_str = args[0]
+            sql_elements = sqlparse.parse(sql_str)
 
-        start_appending = False
-        from_clause_tokens = []
+            start_appending = False
+            from_clause_tokens = []
 
-        sql_tokens = remove_whitespace(sql_elements[0].tokens)
+            sql_tokens = remove_whitespace(sql_elements[0].tokens)
 
-        for sql_token in sql_tokens:
-            if not sql_token.is_whitespace:
-                if sql_token.value == 'from':
-                    start_appending = True
+            for sql_token in sql_tokens:
+                if not sql_token.is_whitespace:
+                    if sql_token.value == 'from':
+                        start_appending = True
 
-                if sql_token.value[:5] == 'where':
-                    start_appending = False
+                    if sql_token.value[:5] == 'where':
+                        start_appending = False
 
-                if start_appending:
-                    from_clause_tokens.append(sql_token)
+                    if start_appending:
+                        from_clause_tokens.append(sql_token)
 
-        from_table = None
-        joins = []
+            from_table = None
+            joins = []
 
-        if from_clause_tokens:
-            # Remove 'from' keyword for now
-            from_clause_tokens.pop(0)
+            if from_clause_tokens:
+                # Remove 'from' keyword for now
+                from_clause_tokens.pop(0)
 
-            # Get from_table
-            from_table_name = str(from_clause_tokens.pop(0))
-            # May need to handle subquery here; it will be a Parenthesis object
-            from_table = Table(from_table_name)
+                # Get from_table
+                from_table_name = str(from_clause_tokens.pop(0))
+                # May need to handle subquery; it will be a Parenthesis object
+                from_table = Table(from_table_name)
 
-            # Construct joins
-            kind = None
-            dataset = None
-            comparisons = []
+                # Construct joins
+                kind = None
+                dataset = None
+                comparisons = []
 
-            for item in from_clause_tokens:
-                # Parse join item
-                item_is_join = is_join(item)
+                for item in from_clause_tokens:
+                    # Parse join item
+                    item_is_join = is_join(item)
 
-                if item_is_join:
-                    # Create join object with previously populated values if
-                    # applicable, and clear out values for a next one
-                    if kind and dataset and comparisons:
-                        join_kind = deepcopy(str(kind))
-                        join_dataset = deepcopy(str(dataset))
-                        join_comparisons = deepcopy(comparisons)
+                    if item_is_join:
+                        # Create join object with previously populated values
+                        # if applicable, and clear out values for a next one
+                        if kind and dataset and comparisons:
+                            join_kind = deepcopy(str(kind))
+                            join_dataset = deepcopy(str(dataset))
+                            join_comparisons = deepcopy(comparisons)
 
-                        join = Join(join_kind, join_dataset, join_comparisons)
-                        joins.append(join)
+                            join = Join(
+                                join_kind, join_dataset, join_comparisons)
+                            joins.append(join)
 
-                        kind = None
-                        dataset = None
-                        comparisons = []
+                            kind = None
+                            dataset = None
+                            comparisons = []
 
-                    kind = get_join_kind(item)
+                        kind = get_join_kind(item)
 
-                    continue
+                        continue
 
-                # Parse dataset item
-                item_is_dataset = is_dataset(item)
+                    # Parse dataset item
+                    if type(item) == Identifier:
+                        dataset = Table(str(item))
 
-                if item_is_dataset:
-                    dataset = item.get_dataset()
+                        continue
 
-                    continue
+                    if type(item) == Parenthesis:
+                        sql_str = str(item)[1:-1]
+                        dataset = Query(sql_str)
 
-                # Parse comparison item
-                item_is_sqlparse_comparison = is_sqlparse_comparison(item)
+                        continue
 
-                if item_is_sqlparse_comparison:
-                    comparison = Comparison(item.__str__())
-                    comparisons.append(comparison)
+                    # Parse comparison item
+                    item_is_sqlparse_comparison = is_sqlparse_comparison(item)
 
-                    continue
+                    if item_is_sqlparse_comparison:
+                        comparison = Comparison(item.__str__())
+                        comparisons.append(comparison)
 
-            # Create the last join
-            if kind and dataset and comparisons:
-                join = Join(kind, dataset, comparisons)
-                joins.append(join)
+                        continue
 
-        self.from_table = from_table
-        self.joins = joins
+                # Create the last join
+                if kind and dataset and comparisons:
+                    join = Join(kind, dataset, comparisons)
+                    joins.append(join)
+
+            self.from_table = from_table
+            self.joins = joins
+
+        elif len(args) == 2:
+            self.from_table = args[0]
+            self.joins = args[1]
 
     def __str__(self):
         from_clause_str = ''
@@ -336,21 +332,26 @@ class WhereClause:
     def __hash__(self):
         return hash(str(self))
 
-    def __init__(self, sql_str):
-        sql_elements = sqlparse.parse(sql_str)
+    def __init__(self, *args):
+        if type(args[0]) == str:
+            sql_str = args[0]
+            sql_elements = sqlparse.parse(sql_str)
 
-        comparisons = []
+            comparisons = []
 
-        for sql_token in sql_elements[0].tokens:
-            if type(sql_token) == Where:
-                where_tokens = sql_token.tokens
+            for sql_token in sql_elements[0].tokens:
+                if type(sql_token) == Where:
+                    where_tokens = sql_token.tokens
 
-                for where_token in where_tokens:
-                    if type(where_token) == SQLParseComparison:
-                        comparison = Comparison(where_token.__str__())
-                        comparisons.append(comparison)
+                    for where_token in where_tokens:
+                        if type(where_token) == SQLParseComparison:
+                            comparison = Comparison(where_token.__str__())
+                            comparisons.append(comparison)
 
-        self.comparisons = comparisons
+            self.comparisons = comparisons
+
+        elif type(args[0]) == list:
+            self.comparisons = args[0]
 
     def is_equivalent_to(self, other):
         equivalent = False
@@ -418,7 +419,6 @@ class Query(DataSet):
                   f'{self.where_clause}')
 
         return string
-
 
     @property
     def db_conn(self):

@@ -1,9 +1,8 @@
-from sqlparse.sql import Comparison as SQLParseComparison
 import re
 
 import sqlparse
-from sqlparse.sql import (Function, Identifier, IdentifierList, Parenthesis,
-                          Token)
+from sqlparse.sql import Comparison as SQLParseComparison
+from sqlparse.sql import Function, Identifier, IdentifierList, Token
 
 
 def remove_whitespace(token_list):
@@ -34,6 +33,7 @@ def get_function_from_statement(statement):
     function_str = match.group() if match else ''
 
     return function_str
+
 
 def get_field_expression(field_str):
     field_expression = ''
@@ -101,7 +101,7 @@ def get_field_strs(select_clause_str):
         for identifier in select_fields:
             field_str = str(identifier)
 
-            if field_str:
+            if field_str and field_str not in (' ', ','):
                 field_strs.append(field_str)
 
     elif type(select_fields) in (Identifier, Function, Token):
@@ -155,15 +155,6 @@ def is_join(item):
     return item_is_join
 
 
-def is_dataset(item):
-    item_is_dataset = False
-
-    if type(item) in (Identifier, Parenthesis):
-        item_is_dataset = True
-
-    return item_is_dataset
-
-
 def is_conjunction(item):
     item_is_conjunction = False
 
@@ -191,4 +182,3 @@ def get_join_kind(item):
         join_kind = 'left join'
 
     return join_kind
-
