@@ -1,5 +1,5 @@
 from unittest import TestCase
-from sqlpt.sql import LogicUnit, Query, RecordSet
+from sqlpt.sql import Comparison, LogicUnit, Query, RecordSet
 from sqlpt.service import remove_whitespace_from_str
 
 
@@ -12,20 +12,20 @@ class FunctionalTestCase(TestCase):
                               where student_id = :student_id), 0)
             '''
 
+        value_sql_str = remove_whitespace_from_str(self.value_sql_str)
+        self.value_query = Query(value_sql_str)
+
+        self.logic_unit = LogicUnit(name='Registered Student',
+                                    query=self.value_query,
+                                    db_source='college.db')
+
         self.record_set_sql_str = '''
             select *
               from student
             '''
 
     def test_logic_unit(self):
-        value_sql_str = remove_whitespace_from_str(self.value_sql_str)
-        self.value_query = Query(value_sql_str)
-
-        logic_unit = LogicUnit(name='Registered Student',
-                               query=self.value_query,
-                               db_source='college.db')
-
-        actual_result = logic_unit.get_value(student_id=1)
+        actual_result = self.logic_unit.get_value(student_id=1)
         expected_result = 1
 
         self.assertEqual(actual_result, expected_result)
@@ -35,9 +35,12 @@ class FunctionalTestCase(TestCase):
             self.record_set_sql_str)
 
         record_set_query = Query(record_set_sql_str)
-        subquery_str = (
-            ' '.join(self.value_sql_str.strip().replace('\n', '').split()))
-        record_set_query.where_clause.add_comparison(f'({subquery_str}) = 1')
+
+        logic_unit_sql_str = self.logic_unit.query.__str__()
+        comparison_str = f'({logic_unit_sql_str}) = 1'
+
+        record_set_query.where_clause.add_comparison(comparison_str)
+
         record_set = RecordSet(name='Registered Students',
                                query=record_set_query,
                                db_source='college.db')
