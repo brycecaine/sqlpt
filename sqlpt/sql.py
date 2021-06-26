@@ -394,9 +394,6 @@ class WhereClause:
 
 @dataclass
 class Query(DataSet):
-    # TODO: Decide if sql_str is needed here; if so, make sure it always
-    # reflects what's in the clauses
-    sql_str: str
     select_clause: SelectClause
     from_clause: FromClause
     where_clause: WhereClause
@@ -405,7 +402,6 @@ class Query(DataSet):
         return hash(str(self))
 
     def __init__(self, sql_str):
-        self.sql_str = sql_str
         self.select_clause = SelectClause(sql_str)
         self.from_clause = FromClause(sql_str)
         self.where_clause = WhereClause(sql_str)
@@ -425,7 +421,7 @@ class Query(DataSet):
 
     @property
     def dataframe(self):
-        df = pd.read_sql_query(self.sql_str, self.db_conn)
+        df = pd.read_sql_query(self.__str__(), self.db_conn)
 
         return df
 
@@ -450,7 +446,7 @@ class Query(DataSet):
         return self
 
     def format_sql(self):
-        formatted_sql = sqlparse.format(self.sql_str)
+        formatted_sql = sqlparse.format(self.__str__())
 
         return formatted_sql
 
