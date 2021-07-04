@@ -91,6 +91,10 @@ class SelectClause:
 
         return select_clause_str
 
+    def add_field(self, *args):
+        field = Field(*args)
+        self.fields.append(field)
+
     def is_equivalent_to(self, other):
         equivalent = False
 
@@ -478,6 +482,9 @@ class Query(DataSet):
         string = f'({self.__str__()})'
 
         return string
+
+    def add_subquery_field(self, subquery_str, alias):
+        self.select_clause.add_field(subquery_str, alias)
 
     def filter_by_subquery(self, subquery_str, operator, value):
         comparison = Comparison(subquery_str, operator, value)
