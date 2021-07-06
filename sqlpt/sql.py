@@ -487,6 +487,13 @@ class Query(DataSet):
         self.select_clause.add_field(subquery_str, alias)
 
     def filter_by_subquery(self, subquery_str, operator, value):
+        if type(value) == list:
+            if operator == '=':
+                operator = 'in'
+
+            value = ','.join(f"{item}" for item in value if item)
+            value = f'({value})'
+
         comparison = Comparison(subquery_str, operator, value)
 
         self.where_clause.add_comparison(comparison)
