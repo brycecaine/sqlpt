@@ -11,7 +11,6 @@ def remove_whitespace(token_list):
     return tokens
 
 
-# TODO: Choose tokenize version (local or imported)
 def tokenize(sql_str):
     sql = sqlparse.parse(sql_str)
     all_tokens = sql[0].tokens

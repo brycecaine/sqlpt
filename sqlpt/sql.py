@@ -72,12 +72,7 @@ class SelectClause:
 
     def __init__(self, select_clause_str):
         field_strs = get_field_strs(select_clause_str)
-
-        # TODO: Convert to list comprehension (multi-line)
-        self.fields = []
-
-        for field_str in field_strs:
-            self.fields.append(Field(field_str))
+        self.fields = [Field(field_str) for field_str in field_strs]
 
     def __str__(self):
         select_clause_str = ''
