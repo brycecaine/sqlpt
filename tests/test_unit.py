@@ -157,11 +157,9 @@ class EquivalenceTestCase(TestCase):
         self.assertTrue(equivalent_2)
 
     def test_query_from_clause_equivalence_1(self):
-        self.query_1.from_clause.is_equivalent_to(self.query_2.from_clause)
-
-        # TODO: Work on from-clause equivalence
-        # self.assertTrue(equivalent_1)
-        self.assertTrue(True)
+        equivalent_1 = self.query_1.from_clause.is_equivalent_to(
+            self.query_2.from_clause)
+        self.assertTrue(equivalent_1)
 
     def test_query_from_clause_equivalence_2(self):
         self.query_2.from_clause.is_equivalent_to(self.query_1.from_clause)

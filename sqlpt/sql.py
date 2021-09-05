@@ -1,6 +1,5 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from sqlite3 import connect
 
 import pandas as pd
 import sqlparse
@@ -137,6 +136,7 @@ class Join:
 
 @dataclass
 class FromClause:
+    # TODO: Accommodate DataSet here, not just Table instances
     from_table: Table
     joins: list
 
@@ -249,13 +249,42 @@ class FromClause:
 
         return from_clause_str
 
+    def first_join_dataset(self):
+        first_join = self.joins[0]
+
+        if first_join.kind == 'join':
+            first_join_dataset = first_join.dataset
+        else:
+            first_join_dataset = None
+
+        return first_join_dataset
+
     def is_equivalent_to(self, other):
         equivalent = False
 
         if isinstance(other, self.__class__):
             # TODO: Allow for equivalence if tables and comparisons are out of
             # order
-            equivalent = is_equivalent(self.joins, other.joins)
+
+            equivalent = (self.from_table == other.from_table
+                          or
+                          (self.from_table == other.first_join_dataset()
+                           and
+                           other.from_table == self.first_join_dataset()))
+
+            # TODO: Work this out
+            if equivalent:
+                for self_join in self.joins:
+                    for other_join in other.joins:
+                        if not self_join.is_equivalent_to(other_join):
+                            equivalent = False
+                            break
+
+                for other_join in other.joins:
+                    for self_join in self.joins:
+                        if not other_join.is_equivalent_to(self_join):
+                            equivalent = False
+                            break
 
         return equivalent
 
@@ -285,22 +314,6 @@ class Comparison:
         self.left_term = elements[0]
         self.operator = elements[1]
         self.right_term = elements[2]
-
-        """ TODO: See if this is needed (where_token is a SQLParseComparison):
-        comparison_tokens = remove_whitespace(
-            where_token.tokens)
-
-        for i, c_token in enumerate(comparison_tokens):
-            if type(c_token) in (Identifier, Parenthesis):
-                left_term = c_token.value
-                operator = comparison_tokens[i+1].value
-                right_term = comparison_tokens[i+2].value
-
-                comparison = Comparison(left_term, operator, right_term)
-
-                comparisons.append(comparison)
-                break
-        """
 
     def is_equivalent_to(self, other):
         equivalent = False
@@ -387,7 +400,7 @@ class WhereClause:
         for self_comparison in self.comparisons:
             for other_comparison in where_clause.comparisons:
                 if self_comparison.left_term == other_comparison.left_term:
-                    # TODO: Figure out what to do with inequalities
+                    # FUTURE: Figure out what to do with inequalities
                     # right_term_list.append
                     pass
 
@@ -432,7 +445,7 @@ class Query(DataSet):
         return df
 
     def fuse(self, query):
-        # TODO: Figure out how to fuse from clauses
+        # FUTURE: Figure out how to fuse from clauses
         if self.from_clause == query.from_clause:
             self.select_clause.fuse(query.select_clause)
             self.where_clause.fuse(query.where_clause)
