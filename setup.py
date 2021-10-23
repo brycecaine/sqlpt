@@ -93,9 +93,9 @@ class UploadCommand(Command):
 
 
 # Where the magic happens:
-# packages = (
-#     find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]))
-packages = []
+packages = (
+    find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]))
+# packages = []
 
 setup(
     name=NAME,

@@ -11,6 +11,12 @@ def remove_whitespace(token_list):
     return tokens
 
 
+def remove_commas(token_list):
+    tokens = [x for x in token_list if not x.value == ',']
+
+    return tokens
+
+
 def tokenize(sql_str):
     sql = sqlparse.parse(sql_str)
     all_tokens = sql[0].tokens

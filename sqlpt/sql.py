@@ -1,16 +1,97 @@
+import re
 from copy import deepcopy
 from dataclasses import dataclass
+from socket import SocketKind
 
 import pandas as pd
 import sqlparse
+import ttg
 from sqlalchemy import create_engine
-from sqlparse.sql import Comparison as SQLParseComparison
-from sqlparse.sql import Identifier, Parenthesis, Where
+from sqlparse.sql import Identifier, Parenthesis, Token, Where
 
-from sqlpt.service import (get_field_alias, get_field_expression,
-                           get_field_strs, get_join_kind, is_equivalent,
-                           is_join, is_sqlparse_comparison, remove_whitespace,
-                           remove_whitespace_from_str)
+from sqlpt.service import (
+    get_field_alias, get_field_expression,
+    get_field_strs, get_join_kind, is_equivalent,
+    is_join, is_sqlparse_comparison,
+    remove_commas, remove_whitespace, remove_whitespace_from_str)
+
+
+def get_sql_clauses(sql_str):
+    sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+
+    select_clause_token_list = []
+    from_clause_token_list = []
+    where_clause_token_list = []
+
+    clause_token_list = select_clause_token_list
+
+    for sql_token in sql_tokens:
+        if type(sql_token) == Token and sql_token.value.lower() == 'from':
+            clause_token_list = from_clause_token_list
+
+        elif type(sql_token) == Where:
+            clause_token_list = where_clause_token_list
+
+        clause_token_list.append(sql_token)
+
+    return select_clause_token_list, from_clause_token_list, where_clause_token_list
+
+
+def get_select_clause_str(sql_str):
+    from_clause_str = sql_str.split(' from ')[0]
+
+    return from_clause_str
+
+
+def parse_fields(token_list):
+    fields = []
+
+    regex = r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
+    pattern = re.compile(regex)
+
+    # TODO: Chain the "remove" functionality
+    print('ttttttttttttttttttttt')
+    print(token_list)
+    print(token_list[1])
+    for identifier in remove_commas(remove_whitespace(token_list[1])):
+        match_obj = re.match(pattern, str(identifier))
+        field_args = (match_obj.group('expression'), match_obj.group('alias'))
+        field = Field(*field_args)
+        fields.append(field)
+
+    return fields
+
+
+def parse_fields_from_str(sql_snip):
+    regex = r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
+
+    pattern = re.compile(regex)
+
+    fields = []
+
+    for match in re.finditer(pattern, sql_snip):
+        field = Field(match.group('expression'), match.group('alias'))
+        fields.append(field)
+
+    return fields
+
+
+def parse_field(sql_snip):
+    regex = r'(\w*)?(\(.*\))?[ ]*(\w*)'
+    match_obj = re.match(regex, sql_snip, re.M|re.I)
+
+    expression_part_1 = match_obj.group(1)
+    expression_part_2 = match_obj.group(2)
+
+    if expression_part_2:
+        expression = f'{expression_part_1}{expression_part_2}'
+    else:
+        expression = expression_part_1
+
+    alias = match_obj.group(3)
+    field = Field(expression, alias)
+
+    return field
 
 
 @dataclass
@@ -69,21 +150,26 @@ class SelectClause:
     def __hash__(self):
         return hash(str(self))
 
-    def __init__(self, select_clause_str):
-        field_strs = get_field_strs(select_clause_str)
-        self.fields = [Field(field_str) for field_str in field_strs]
+    def __init__(self, *args):
+        if type(args[0]) == list:
+            token_list = args[0]
+            self.fields = parse_fields(token_list)
+
+        else:
+            select_clause_str = args[0]
+            field_strs = get_field_strs(select_clause_str)
+            self.fields = [Field(field_str) for field_str in field_strs]
 
     def __str__(self):
-        select_clause_str = ''
-
-        for i, field in enumerate(self.fields):
-            if i == 0:
-                select_clause_str += f'select {field}'
-
-            else:
-                select_clause_str += f', {field}'
+        select_clause_str = f"select {', '.join(self.field_strs)}"
 
         return select_clause_str
+
+    @property
+    def field_strs(self):
+        field_strs = [str(field) for field in self.fields]
+
+        return field_strs
 
     def add_field(self, *args):
         field = Field(*args)
@@ -101,35 +187,100 @@ class SelectClause:
         pass
 
 
+def get_expression(sql_tokens):
+    expression = ''
+
+    for sql_token in sql_tokens:
+        trimmed_sql_token = ' '.join(str(sql_token).split())
+        expression += f'{trimmed_sql_token} '
+
+    expression = expression[:-1]
+
+    return expression
+
+
+def get_truth_table_result(expr):
+    expr_w_parens = re.sub(r'(\w+\s*=\s*\w+)', r'(\1)', expr)
+    inputs = [i.replace(' ', '') for i in re.split(r'=|and|or|not', expr)]
+    truth_table = ttg.Truths(inputs, [expr_w_parens])
+
+    truth_table_result = []
+
+    for conditions_set in truth_table.base_conditions:
+        condition_result = truth_table.calculate(*conditions_set)
+        truth_table_result.append(condition_result[-1])
+
+    return truth_table_result
+
+
+def is_equiv(expr_1, expr_2):
+    equiv = get_truth_table_result(expr_1) == get_truth_table_result(expr_2)
+
+    return equiv
+
+
+@dataclass
+class ExpressionClause:
+    leading_word: str
+    expression: str
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __init__(self, *args):
+        full_expression = args[0]
+        full_expression_words = full_expression.split(' ')
+        self.leading_word = full_expression_words.pop(0)
+        self.expression = ' '.join(full_expression_words)
+
+    def is_equivalent_to(self, other):
+        equivalent = is_equiv(self.expression, other.expression)
+
+        return equivalent
+
+    def __str__(self):
+        return f'{self.leading_word} {self.expression}'
+
+    def parameterize(self, parameter_fields):
+        raise Exception('Needs implementation')
+        # TODO Start with matching the comparison, kind of like this:
+        # expr_w_parens = re.sub(r'(\w+\s*=\s*\w+)', r'(\1)', expr)
+        """
+        for comparison in self.comparisons:
+            left_term = comparison.left_term
+
+            if left_term in parameter_fields:
+                comparison.right_term = f':{left_term}'
+
+        return self
+        """
+
+
+class OnClause(ExpressionClause):
+    pass
+
+
 @dataclass
 class Join:
     kind: str
     dataset: DataSet
-    comparisons: list
+    on_clause: OnClause
 
     def __hash__(self):
         return hash(str(self))
 
     def __str__(self):
-        join_str = f' {self.kind} {self.dataset}'
-
-        for i, comparison in enumerate(self.comparisons):
-            conjunction = 'on' if i == 0 else 'and'
-            join_str += f' {conjunction} {comparison}'
+        dataset_str = f'({self.dataset})' if isinstance(self.dataset, Query) else self.dataset
+        join_str = f' {self.kind} {dataset_str} {self.on_clause}'
 
         return join_str
 
     def is_equivalent_to(self, other):
-        equivalent = False
-
-        if isinstance(other, self.__class__):
-            datasets_equivalent = is_equivalent(
-                [self.dataset], [other.dataset])
-
-            comparison_equivalent = is_equivalent(
-                self.comparisons, other.comparisons)
-
-            equivalent = datasets_equivalent and comparison_equivalent
+        equivalent = (self.kind == other.kind
+                      and
+                      is_equivalent([self.dataset], [other.dataset])
+                      and
+                      self.on_clause.is_equivalent_to(other.on_clause))
 
         return equivalent
 
@@ -143,27 +294,24 @@ class FromClause:
     def __hash__(self):
         return hash(str(self))
 
+    # TODO Move away from sqlparse in favor of regex's here and elsewhere
+    def __init__new_now_old(self, *args):
+        sql_str = args[0]
+        # query_sql = 'select hi, yo from dual join laud on a = b WHERE i = j'
+        # query_sql = 'select hi from dual'
+        # query_regex = r'/(select\s+.+\s+)(from\s+.*?\s+)(where\s+.+|$);?/i'
+        query_regex = r'(select\s+.*?\s+)(from\s+.*?\s*)(where\s+.+|$);?'
+        # query_regex = r'(.*)'
+        match_obj = re.match(query_regex, sql_str, re.M|re.I)
+
+        if match_obj:
+            select_clause_sql = match_obj.group(1)
+            from_clause_sql = match_obj.group(2)
+            where_clause_sql = match_obj.group(3)
+
     def __init__(self, *args):
         if len(args) == 1:
-            sql_str = args[0]
-            sql_elements = sqlparse.parse(sql_str)
-
-            start_appending = False
-            from_clause_tokens = []
-
-            sql_tokens = remove_whitespace(sql_elements[0].tokens)
-
-            for sql_token in sql_tokens:
-                if not sql_token.is_whitespace:
-                    if sql_token.value == 'from':
-                        start_appending = True
-
-                    if sql_token.value[:5] == 'where':
-                        start_appending = False
-
-                    if start_appending:
-                        from_clause_tokens.append(sql_token)
-
+            from_clause_tokens = args[0]
             from_table = None
             joins = []
 
@@ -179,27 +327,26 @@ class FromClause:
                 # Construct joins
                 kind = None
                 dataset = None
-                comparisons = []
+                on_tokens = []
 
                 for item in from_clause_tokens:
                     # Parse join item
-                    item_is_join = is_join(item)
-
-                    if item_is_join:
+                    if is_join(item):
                         # Create join object with previously populated values
                         # if applicable, and clear out values for a next one
-                        if kind and dataset and comparisons:
+                        if kind and dataset and on_tokens:
                             join_kind = deepcopy(str(kind))
                             join_dataset = deepcopy(str(dataset))
-                            join_comparisons = deepcopy(comparisons)
+                            expression = get_expression(on_tokens)
+                            join_on_clause = OnClause(expression)
 
                             join = Join(
-                                join_kind, join_dataset, join_comparisons)
+                                join_kind, join_dataset, join_on_clause)
                             joins.append(join)
 
                             kind = None
                             dataset = None
-                            comparisons = []
+                            on_tokens = []
 
                         kind = get_join_kind(item)
 
@@ -218,17 +365,15 @@ class FromClause:
                         continue
 
                     # Parse comparison item
-                    item_is_sqlparse_comparison = is_sqlparse_comparison(item)
-
-                    if item_is_sqlparse_comparison:
-                        comparison = Comparison(item.__str__())
-                        comparisons.append(comparison)
-
-                        continue
+                    # TODO Left off here wrestling with whitespace
+                    on_tokens.append(item)
 
                 # Create the last join
-                if kind and dataset and comparisons:
-                    join = Join(kind, dataset, comparisons)
+                if kind and dataset and on_tokens:
+                    expression = get_expression(on_tokens)
+                    on_clause = OnClause(expression)
+
+                    join = Join(kind, dataset, on_clause)
                     joins.append(join)
 
             self.from_table = from_table
@@ -337,77 +482,8 @@ class Comparison:
         return string
 
 
-@dataclass
-class WhereClause:
-    comparisons: list
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def __init__(self, *args):
-        if type(args[0]) == str:
-            sql_str = args[0]
-            sql_elements = sqlparse.parse(sql_str)
-
-            comparisons = []
-
-            for sql_token in sql_elements[0].tokens:
-                if type(sql_token) == Where:
-                    where_tokens = sql_token.tokens
-
-                    for where_token in where_tokens:
-                        if type(where_token) == SQLParseComparison:
-                            comparison = Comparison(where_token.__str__())
-                            comparisons.append(comparison)
-
-            self.comparisons = comparisons
-
-        elif type(args[0]) == list:
-            self.comparisons = args[0]
-
-    def is_equivalent_to(self, other):
-        equivalent = False
-
-        if isinstance(other, self.__class__):
-            for i, join in enumerate(self.comparisons):
-                if join == other.comparisons[i]:
-                    equivalent = True
-
-        return equivalent
-
-    def __str__(self):
-        where_clause_str = ''
-
-        for i, comparison in enumerate(self.comparisons):
-            if i == 0:
-                where_clause_str += f'where {comparison}'
-
-            else:
-                where_clause_str += f' and {comparison}'
-
-        return where_clause_str
-
-    def parameterize(self, parameter_fields):
-        for comparison in self.comparisons:
-            left_term = comparison.left_term
-
-            if left_term in parameter_fields:
-                comparison.right_term = f':{left_term}'
-
-        return self
-
-    def fuse(self, where_clause):
-        for self_comparison in self.comparisons:
-            for other_comparison in where_clause.comparisons:
-                if self_comparison.left_term == other_comparison.left_term:
-                    # FUTURE: Figure out what to do with inequalities
-                    # right_term_list.append
-                    pass
-
-        return self
-
-    def add_comparison(self, comparison):
-        self.comparisons.append(comparison)
+class WhereClause(ExpressionClause):
+    pass
 
 
 @dataclass
@@ -420,11 +496,19 @@ class Query(DataSet):
         return hash(str(self))
 
     def __init__(self, sql_str):
-        sql_str = remove_whitespace_from_str(sql_str)
+        if sql_str:
+            select_clause_tl, from_clause_tl, where_clause_tl = get_sql_clauses(sql_str)
 
-        self.select_clause = SelectClause(sql_str)
-        self.from_clause = FromClause(sql_str)
-        self.where_clause = WhereClause(sql_str)
+            # TODO Make sure to get the correct where clause when parsing sql with
+            #     more than one
+            # TODO Figure out why leaving self.expression as '' results in:
+            #     SyntaxWarning: null string passed to Literal; use Empty() instead
+            # TODO Make this into a function and find a better place or it
+            # TODO Allow constructing clauses by either a token list or sql str?
+            self.select_clause = SelectClause(select_clause_tl)
+            self.from_clause = FromClause(from_clause_tl)
+            where_expression = get_expression(where_clause_tl)
+            self.where_clause = WhereClause(where_expression)
 
     def __str__(self):
         string = (f'{self.select_clause} {self.from_clause} '
