@@ -79,15 +79,23 @@ class Field:
                 field_str = args[0]
                 expression = get_field_expression(field_str)
                 alias = get_field_alias(field_str)
+                # TODO Get query here
 
             elif type(args[0]) == list:
                 # TODO Untested
                 expression = args[0][0]
                 alias = args[0][1]
+                # TODO Get query here
 
         elif len(args) == 2:
             expression = args[0]
             alias = args[1]
+            # TODO Get query here (assign to None?)
+
+        elif len(args) == 3:
+            expression = args[0]
+            alias = args[1]
+            self.query = args[2]
 
         self.expression = expression
         self.alias = alias
@@ -155,13 +163,21 @@ class SelectClause:
     def parse_fields(self, field_token_list):
         fields = []
 
-        regex = r'(?P<expression>[\w\*]+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
+        regex = r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
         pattern = re.compile(regex)
 
         # FUTR: Chain the "remove" functionality
         for identifier in remove_whitespace(field_token_list, (';', ',')):
             match_obj = re.match(pattern, str(identifier))
-            field_args = (match_obj.group('expression'), match_obj.group('alias'))
+            expression = match_obj.group('expression')
+            alias = match_obj.group('alias')
+
+            if expression.startswith('(select'):
+                query = Query(expression[1:-1])
+            else:
+                query = None
+
+            field_args = (expression, alias, query)
             field = Field(*field_args)
             fields.append(field)
 

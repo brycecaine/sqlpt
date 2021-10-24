@@ -195,7 +195,7 @@ class StringListTestCase(TestCase):
 
 
 class ParseTestCase(TestCase):
-    def _test_parse_sql_clauses(self):
+    def test_parse_sql_clauses(self):
         sql_str = '''
             select a name,
                    b,
@@ -213,7 +213,12 @@ class ParseTestCase(TestCase):
                and i = j
         '''
 
-        select_clause, from_clause, where_clause = parse_sql_clauses(sql_str)
+        query = Query(sql_str)
+        select_subquery = query.select_clause.fields[4].query
+
+        self.assertEqual(type(select_subquery), Query)
+
+        # TODO Left off 2021-10-23: Need to parse subquery from join clause
 
     def test_case_statement_in_parentheses(self):
         sql_str = '''
