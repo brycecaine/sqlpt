@@ -100,6 +100,52 @@ class StringTestCase(TestCase):
                    expected_where_clause)
 
 
+class StringListTestCase(TestCase):
+    def _test(self, sql_str, expected_select_clause, expected_from_clause,
+              expected_where_clause):
+        query = Query(sql_str)
+
+        expected_query = Query(
+            expected_select_clause,
+            expected_from_clause,
+            expected_where_clause)
+
+        self.assertEqual(query, expected_query)
+        self.assertEqual(query.select_clause, expected_select_clause)
+        self.assertEqual(query.from_clause, expected_from_clause)
+        self.assertEqual(query.where_clause, expected_where_clause)
+
+    def test_query_basic(self):
+        sql_str = "select * from dual where dummy = 'X'"
+
+        expected_select_clause = SelectClause(['select', '*'])
+        expected_from_clause = FromClause(['from', 'dual', []])
+        expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
+
+        self._test(sql_str, expected_select_clause, expected_from_clause,
+                   expected_where_clause)
+
+    def test_query_single_field(self):
+        sql_str = "select field_1 from dual where dummy = 'X'"
+
+        expected_select_clause = SelectClause(['select', ['field_1']])
+        expected_from_clause = FromClause(['from', 'dual', []])
+        expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
+
+        self._test(sql_str, expected_select_clause, expected_from_clause,
+                   expected_where_clause)
+
+    def test_query_multiple_fields(self):
+        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
+
+        expected_select_clause = SelectClause(['select', ['field_1', 'field_2']])
+        expected_from_clause = FromClause(['from', 'dual', []])
+        expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
+
+        self._test(sql_str, expected_select_clause, expected_from_clause,
+                   expected_where_clause)
+
+
 class ParseTestCase(TestCase):
     def _test_parse_sql_clauses(self):
         sql_str = '''
@@ -218,13 +264,7 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_select_clause), expected_select_clause_str)
 
     def test_joins(self):
-        expected_joins = [
-            Join(
-                kind='join',
-                dataset=Table(name='d'),
-                on_clause=OnClause('on e = f')
-            )
-        ]
+        expected_joins = [Join('join', Table(name='d'), OnClause('on e = f'))]
 
         actual_joins = self.query.from_clause.joins
 
@@ -233,13 +273,7 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_joins[0]), ' join d on e = f')
 
     def test_from_clause(self):
-        expected_joins = [
-            Join(
-                kind='join',
-                dataset=Table(name='d'),
-                on_clause=OnClause('on e = f')
-            )
-        ]
+        expected_joins = [Join('join', Table(name='d'), OnClause('on e = f'))]
 
         expected_table = Table(name='c')
         expected_from_clause = FromClause(expected_table, expected_joins)
