@@ -1,7 +1,6 @@
 import re
 from copy import deepcopy
 from dataclasses import dataclass
-from socket import SocketKind
 
 import pandas as pd
 import sqlparse
@@ -9,11 +8,9 @@ import ttg
 from sqlalchemy import create_engine
 from sqlparse.sql import Identifier, Parenthesis, Token, Where
 
-from sqlpt.service import (
-    get_field_alias, get_field_expression,
-    get_field_strs, get_join_kind, is_equivalent,
-    is_join, is_sqlparse_comparison,
-    remove_commas, remove_whitespace, remove_whitespace_from_str)
+from sqlpt.service import (get_field_alias, get_field_expression,
+                           get_field_strs, get_join_kind, is_equivalent,
+                           is_join, remove_whitespace)
 
 
 def get_sql_clauses(sql_str):
@@ -37,23 +34,14 @@ def get_sql_clauses(sql_str):
     return select_clause_token_list, from_clause_token_list, where_clause_token_list
 
 
-def get_select_clause_str(sql_str):
-    from_clause_str = sql_str.split(' from ')[0]
-
-    return from_clause_str
-
-
-def parse_fields(token_list):
+def parse_fields(field_token_list):
     fields = []
 
-    regex = r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
+    regex = r'(?P<expression>[\w\*]+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
     pattern = re.compile(regex)
 
-    # TODO: Chain the "remove" functionality
-    print('ttttttttttttttttttttt')
-    print(token_list)
-    print(token_list[1])
-    for identifier in remove_commas(remove_whitespace(token_list[1])):
+    # FUTR: Chain the "remove" functionality
+    for identifier in remove_whitespace(field_token_list, (';', ',')):
         match_obj = re.match(pattern, str(identifier))
         field_args = (match_obj.group('expression'), match_obj.group('alias'))
         field = Field(*field_args)
@@ -151,10 +139,22 @@ class SelectClause:
         return hash(str(self))
 
     def __init__(self, *args):
+        # If a token list is passed in
         if type(args[0]) == list:
             token_list = args[0]
-            self.fields = parse_fields(token_list)
 
+            # Remove "select" token
+            if str(token_list[0]) == 'select':
+                token_list.pop(0)
+
+            if type(token_list[0]) == list:
+                field_token_list = token_list[0]
+            else:
+                field_token_list = [token_list[0]]
+
+            self.fields = parse_fields(field_token_list)
+
+        # Otherwise assume a string is passed in
         else:
             select_clause_str = args[0]
             field_strs = get_field_strs(select_clause_str)
@@ -227,11 +227,18 @@ class ExpressionClause:
     def __hash__(self):
         return hash(str(self))
 
+    # TODO allow for token list?
     def __init__(self, *args):
         full_expression = args[0]
         full_expression_words = full_expression.split(' ')
         self.leading_word = full_expression_words.pop(0)
         self.expression = ' '.join(full_expression_words)
+
+    def __bool__(self):
+        if not self.leading_word and not self.expression:
+            return False
+
+        return True
 
     def is_equivalent_to(self, other):
         equivalent = is_equiv(self.expression, other.expression)
@@ -239,7 +246,9 @@ class ExpressionClause:
         return equivalent
 
     def __str__(self):
-        return f'{self.leading_word} {self.expression}'
+        string = f'{self.leading_word} {self.expression}' if self else ''
+
+        return string
 
     def parameterize(self, parameter_fields):
         raise Exception('Needs implementation')
@@ -309,6 +318,7 @@ class FromClause:
             from_clause_sql = match_obj.group(2)
             where_clause_sql = match_obj.group(3)
 
+    # TODO: Allow kwargs; args xor kwargs; apply to all __init__ methods
     def __init__(self, *args):
         if len(args) == 1:
             from_clause_tokens = args[0]
@@ -492,11 +502,46 @@ class Query(DataSet):
     from_clause: FromClause
     where_clause: WhereClause
 
+    def _optional_clause_equal(self, other, kind):
+        clauses_equal = False
+
+        self_has_clause = hasattr(self, f'{kind}_clause')
+        other_has_clause = hasattr(other, f'{kind}_clause')
+
+        if self_has_clause and other_has_clause:
+            clauses_equal = (getattr(self, f'{kind}_clause') ==
+                             getattr(other, f'{kind}_clause'))
+        elif self_has_clause and not other_has_clause:
+            clauses_equal = False
+        elif not self_has_clause and other_has_clause:
+            clauses_equal = False
+        else:
+            clauses_equal = True
+
+        return clauses_equal
+
+    def __eq__(self, other):
+        query_egual = False
+
+        if isinstance(other, Query):
+            select_clauses_equal = self.select_clause == other.select_clause
+            from_clauses_equal = self._optional_clause_equal(other, 'from')
+            where_clauses_equal = self._optional_clause_equal(other, 'where')
+
+            query_egual = (
+                select_clauses_equal and
+                from_clauses_equal and
+                where_clauses_equal)
+
+        return query_egual
+
     def __hash__(self):
         return hash(str(self))
 
-    def __init__(self, sql_str):
-        if sql_str:
+    def __init__(self, *args):
+        # TODO: What if a sole select clause object is passed in?
+        if len(args) == 1:
+            sql_str = args[0]
             select_clause_tl, from_clause_tl, where_clause_tl = get_sql_clauses(sql_str)
 
             # TODO Make sure to get the correct where clause when parsing sql with
@@ -510,9 +555,24 @@ class Query(DataSet):
             where_expression = get_expression(where_clause_tl)
             self.where_clause = WhereClause(where_expression)
 
+        elif len(args) == 2:
+            self.select_clause = args[0]
+            self.from_clause = args[1]
+
+        elif len(args) == 3:
+            self.select_clause = args[0]
+            self.from_clause = args[1]
+            self.where_clause = args[2]
+
     def __str__(self):
-        string = (f'{self.select_clause} {self.from_clause} '
-                  f'{self.where_clause}')
+        string = str(self.select_clause)
+
+        if self.from_clause:
+            string += f' {self.from_clause}'
+
+        if hasattr(self, 'where_clause'):
+            if self.where_clause:
+                string += f' {self.where_clause}'
 
         return string
 

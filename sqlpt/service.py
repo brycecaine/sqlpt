@@ -5,14 +5,20 @@ from sqlparse.sql import Comparison as SQLParseComparison
 from sqlparse.sql import Function, Identifier, IdentifierList, Token
 
 
-def remove_whitespace(token_list):
-    tokens = [x for x in token_list if not x.is_whitespace]
+# TODO: Accommodate list of strings (in addn to token_list) here and everywhere
+def remove_whitespace(item_list, addl_chars=()):
+    tokens = []
+    chars_to_exclude = [' ']
+    chars_to_exclude.extend(addl_chars)
 
-    return tokens
+    for item in item_list:
+        if type(item) == Token:
+            value = item.value
+        else:
+            value = item
 
-
-def remove_commas(token_list):
-    tokens = [x for x in token_list if not x.value == ',']
+        if value not in chars_to_exclude:
+            tokens.append(item)
 
     return tokens
 
