@@ -1,7 +1,7 @@
-import ttg
 import re
 
 import sqlparse
+import ttg
 from sqlparse.sql import Comparison as SQLParseComparison
 from sqlparse.sql import Function, Identifier, IdentifierList, Token
 
