@@ -4,45 +4,44 @@ from dataclasses import dataclass
 
 import pandas as pd
 import sqlparse
-import ttg
 from sqlalchemy import create_engine
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
-from sqlpt.service import (get_field_alias, get_field_expression,
-                           get_field_strs, get_join_kind, is_equivalent,
-                           is_join, parse_sql_clauses, remove_whitespace)
+from sqlpt.service import (get_truth_table_result, get_field_alias, get_field_expression,
+                           get_join_kind, is_equivalent,
+                           is_join, remove_whitespace)
 
 
-def parse_fields_from_str(sql_snip):
-    regex = r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
+class SqlStr(str):
+    def parse_fields(self):
+        regex = r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
 
-    pattern = re.compile(regex)
+        pattern = re.compile(regex)
 
-    fields = []
+        fields = []
 
-    for match in re.finditer(pattern, sql_snip):
-        field = Field(match.group('expression'), match.group('alias'))
-        fields.append(field)
+        for match in re.finditer(pattern, self):
+            field = Field(match.group('expression'), match.group('alias'))
+            fields.append(field)
 
-    return fields
+        return fields
 
+    def parse_field(self):
+        regex = r'(\w*)?(\(.*\))?[ ]*(\w*)'
+        match_obj = re.match(regex, self, re.M|re.I)
 
-def parse_field(sql_snip):
-    regex = r'(\w*)?(\(.*\))?[ ]*(\w*)'
-    match_obj = re.match(regex, sql_snip, re.M|re.I)
+        expression_part_1 = match_obj.group(1)
+        expression_part_2 = match_obj.group(2)
 
-    expression_part_1 = match_obj.group(1)
-    expression_part_2 = match_obj.group(2)
+        if expression_part_2:
+            expression = f'{expression_part_1}{expression_part_2}'
+        else:
+            expression = expression_part_1
 
-    if expression_part_2:
-        expression = f'{expression_part_1}{expression_part_2}'
-    else:
-        expression = expression_part_1
+        alias = match_obj.group(3)
+        field = Field(expression, alias)
 
-    alias = match_obj.group(3)
-    field = Field(expression, alias)
-
-    return field
+        return field
 
 
 @dataclass
@@ -190,26 +189,6 @@ class SelectClause:
         pass
 
 
-def get_truth_table_result(expr):
-    expr_w_parens = re.sub(r'(\w+\s*=\s*\w+)', r'(\1)', expr)
-    inputs = [i.replace(' ', '') for i in re.split(r'=|and|or|not', expr)]
-    truth_table = ttg.Truths(inputs, [expr_w_parens])
-
-    truth_table_result = []
-
-    for conditions_set in truth_table.base_conditions:
-        condition_result = truth_table.calculate(*conditions_set)
-        truth_table_result.append(condition_result[-1])
-
-    return truth_table_result
-
-
-def is_equiv(expr_1, expr_2):
-    equiv = get_truth_table_result(expr_1) == get_truth_table_result(expr_2)
-
-    return equiv
-
-
 @dataclass
 class ExpressionClause:
     leading_word: str
@@ -276,7 +255,8 @@ class ExpressionClause:
         return string
 
     def is_equivalent_to(self, other):
-        equivalent = is_equiv(self.expression, other.expression)
+        equivalent = (get_truth_table_result(self.expression) ==
+                      get_truth_table_result(other.expression))
 
         return equivalent
 

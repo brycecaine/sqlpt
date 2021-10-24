@@ -2,8 +2,8 @@ from unittest import TestCase
 
 from sqlpt import service
 from sqlpt.sql import (Field, FromClause, Join, OnClause, Query, SelectClause,
-                       Table, WhereClause, parse_sql_clauses, parse_field,
-                       parse_fields_from_str)
+                       Table, WhereClause,
+                       SqlStr)
 
 
 # TODO Delete this when StringTestCase, TokenListTestCase, and
@@ -235,39 +235,40 @@ class ParseTestCase(TestCase):
 
 class FunctionTestCase(TestCase):
     def test_parse_field_basic_no_alias(self):
-        actual_field = parse_field('a')
+        actual_field = SqlStr('a').parse_field()
         expected_field = Field('a', '')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_basic_with_alias(self):
-        actual_field = parse_field('b c')
+        actual_field = SqlStr('b c').parse_field()
         expected_field = Field('b', 'c')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_function_no_alias(self):
-        actual_field = parse_field('fn(x, y)')
+        actual_field = SqlStr('fn(x, y)').parse_field()
         expected_field = Field('fn(x, y)', '')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_function_with_alias(self):
-        actual_field = parse_field('fn(x, y) z')
+        actual_field = SqlStr('fn(x, y) z').parse_field()
         expected_field = Field('fn(x, y)', 'z')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_subquery_no_alias(self):
-        actual_field = parse_field('(select * from dual)')
+        actual_field = SqlStr('(select * from dual)').parse_field()
         expected_field = Field('(select * from dual)', '')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_subquery_with_alias(self):
-        actual_field = parse_field('(select * from dual) z')
+        actual_field = SqlStr('(select * from dual) z').parse_field()
         expected_field = Field('(select * from dual)', 'z')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_fields_from_str(self):
-        actual_fields = parse_fields_from_str(
+        sql_str = SqlStr(
             'a, b c, fn(x, y), fn(x, y) z, (select * from dual), '
             '(select * from dual) z')
+        actual_fields = sql_str.parse_fields()
         expected_fields = [
             Field('a', ''),
             Field('b', 'c'),

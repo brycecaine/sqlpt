@@ -1,3 +1,4 @@
+import ttg
 import re
 
 import sqlparse
@@ -190,3 +191,17 @@ def get_join_kind(item):
         join_kind = 'left join'
 
     return join_kind
+
+
+def get_truth_table_result(expr):
+    expr_w_parens = re.sub(r'(\w+\s*=\s*\w+)', r'(\1)', expr)
+    inputs = [i.replace(' ', '') for i in re.split(r'=|and|or|not', expr)]
+    truth_table = ttg.Truths(inputs, [expr_w_parens])
+
+    truth_table_result = []
+
+    for conditions_set in truth_table.base_conditions:
+        condition_result = truth_table.calculate(*conditions_set)
+        truth_table_result.append(condition_result[-1])
+
+    return truth_table_result
