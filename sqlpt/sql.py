@@ -7,9 +7,9 @@ import sqlparse
 from sqlalchemy import create_engine
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
-from sqlpt.service import (get_truth_table_result, get_field_alias, get_field_expression,
-                           get_join_kind, is_equivalent,
-                           is_join, remove_whitespace)
+from sqlpt.service import (get_field_alias, get_field_expression,
+                           get_join_kind, get_truth_table_result,
+                           is_equivalent, is_join, remove_whitespace)
 
 
 class SqlStr(str):
