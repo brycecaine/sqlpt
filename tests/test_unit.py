@@ -99,6 +99,54 @@ class StringTestCase(TestCase):
         self._test(sql_str, expected_select_clause, expected_from_clause,
                    expected_where_clause)
 
+    def test_select_clause(self):
+        sql_str = 'select field_1, field_2'
+
+        actual_select_clause = str(SelectClause(sql_str))
+        expected_select_clause = sql_str
+
+        self.assertEqual(actual_select_clause, expected_select_clause)
+
+    def test_select_clause_from_full_query_sql_str(self):
+        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
+
+        actual_select_clause = str(SelectClause(sql_str))
+        expected_select_clause = 'select field_1, field_2'
+
+        self.assertEqual(actual_select_clause, expected_select_clause)
+
+    def test_from_clause(self):
+        sql_str = 'from dual'
+
+        actual_from_clause = str(FromClause(sql_str))
+        expected_from_clause = sql_str
+
+        self.assertEqual(actual_from_clause, expected_from_clause)
+
+    def test_from_clause_from_full_query_sql_str(self):
+        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
+
+        actual_from_clause = str(FromClause(sql_str))
+        expected_from_clause = 'from dual'
+
+        self.assertEqual(actual_from_clause, expected_from_clause)
+
+    def test_where_clause(self):
+        sql_str = "where dummy = 'X'"
+
+        actual_where_clause = str(WhereClause(sql_str))
+        expected_where_clause = sql_str
+
+        self.assertEqual(actual_where_clause, expected_where_clause)
+
+    def test_where_clause_from_full_query_sql_str(self):
+        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
+
+        actual_where_clause = str(WhereClause(sql_str))
+        expected_where_clause = "where dummy = 'X'"
+
+        self.assertEqual(actual_where_clause, expected_where_clause)
+
 
 class StringListTestCase(TestCase):
     def _test(self, sql_str, expected_select_clause, expected_from_clause,

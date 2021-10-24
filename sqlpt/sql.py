@@ -10,50 +10,7 @@ from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
 from sqlpt.service import (get_field_alias, get_field_expression,
                            get_field_strs, get_join_kind, is_equivalent,
-                           is_join, remove_whitespace)
-
-
-def parse_sql_clauses(sql_str):
-    sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
-
-    select_clause_token_list = []
-    from_clause_token_list = []
-    where_clause_token_list = []
-
-    clause_token_list = select_clause_token_list
-
-    for sql_token in sql_tokens:
-        if type(sql_token) == Token and sql_token.value.lower() == 'from':
-            clause_token_list = from_clause_token_list
-
-        elif type(sql_token) == Where:
-            clause_token_list = where_clause_token_list
-
-        clause_token_list.append(sql_token)
-
-    clauses_tuple = (
-        select_clause_token_list,
-        from_clause_token_list,
-        where_clause_token_list,
-    )
-
-    return clauses_tuple
-
-
-def parse_fields(field_token_list):
-    fields = []
-
-    regex = r'(?P<expression>[\w\*]+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
-    pattern = re.compile(regex)
-
-    # FUTR: Chain the "remove" functionality
-    for identifier in remove_whitespace(field_token_list, (';', ',')):
-        match_obj = re.match(pattern, str(identifier))
-        field_args = (match_obj.group('expression'), match_obj.group('alias'))
-        field = Field(*field_args)
-        fields.append(field)
-
-    return fields
+                           is_join, parse_sql_clauses, remove_whitespace)
 
 
 def parse_fields_from_str(sql_snip):
@@ -153,25 +110,37 @@ class SelectClause:
     def __init__(self, *args):
         if len(args) == 1:
             if type(args[0]) == str:
-                select_clause_str = args[0]
-                field_strs = get_field_strs(select_clause_str)
-                fields = [Field(field_str) for field_str in field_strs]
+                sql_str = args[0]
+
+                sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+
+                token_list = []
+
+                for sql_token in sql_tokens:
+                    if type(sql_token) == Token:
+                        if sql_token.value.lower() == 'from':
+                            break
+
+                    elif type(sql_token) == Where:
+                        break
+
+                    token_list.append(sql_token)
 
             elif type(args[0]) == list:
                 token_list = args[0]
 
-                # Remove "select" token
-                if str(token_list[0]) == 'select':
-                    token_list.pop(0)
+            # Remove "select" token
+            if str(token_list[0]) == 'select':
+                token_list.pop(0)
 
-                if type(token_list[0]) == list:
-                    field_token_list = token_list[0]
-                elif type(token_list[0]) == IdentifierList:
-                    field_token_list = token_list[0]
-                else:
-                    field_token_list = [token_list[0]]
+            if type(token_list[0]) == list:
+                field_token_list = token_list[0]
+            elif type(token_list[0]) == IdentifierList:
+                field_token_list = token_list[0]
+            else:
+                field_token_list = [token_list[0]]
 
-                fields = parse_fields(field_token_list)
+            fields = self.parse_fields(field_token_list)
 
         # TODO Figure out how to handle a list of Field objects passed in as the single positional argument
         self.fields = fields
@@ -183,6 +152,21 @@ class SelectClause:
         select_clause_str = f"select {', '.join(self.field_strs)}"
 
         return select_clause_str
+
+    def parse_fields(self, field_token_list):
+        fields = []
+
+        regex = r'(?P<expression>[\w\*]+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
+        pattern = re.compile(regex)
+
+        # FUTR: Chain the "remove" functionality
+        for identifier in remove_whitespace(field_token_list, (';', ',')):
+            match_obj = re.match(pattern, str(identifier))
+            field_args = (match_obj.group('expression'), match_obj.group('alias'))
+            field = Field(*field_args)
+            fields.append(field)
+
+        return fields
 
     @property
     def field_strs(self):
@@ -234,25 +218,41 @@ class ExpressionClause:
     def __init__(self, *args):
         if len(args) == 1:
             if type(args[0]) == str:
-                full_expression_words = args[0].split(' ')
+                sql_str = args[0]
 
-                leading_word = full_expression_words.pop(0)
-                expression = ' '.join(full_expression_words)
+                sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+
+                expression_clause_token_list = []
+
+                start_appending = False
+
+                for sql_token in sql_tokens:
+                    if type(sql_token) == Token:
+                        if sql_token.value.lower() == 'on':
+                            start_appending = True
+
+                    if type(sql_token) == Where:
+                        start_appending = True
+
+                    if start_appending:
+                        expression_clause_token_list.append(sql_token)
 
             elif type(args[0]) == list:
-                expression = ''
+                expression_clause_token_list = args[0]
 
-                for sql_token in args[0]:
-                    # TODO Trim in parse_sql_clauses to not need parsing anywhere else
-                    trimmed_sql_token = ' '.join(str(sql_token).split())
-                    expression += f'{trimmed_sql_token} '
+            expression = ''
 
-                expression = expression[:-1]
+            for sql_token in expression_clause_token_list:
+                # TODO Trim in beforehand to not need parsing anywhere else
+                trimmed_sql_token = ' '.join(str(sql_token).split())
+                expression += f'{trimmed_sql_token} '
 
-                full_expression_words = expression.split(' ')
+            expression = expression[:-1]
 
-                leading_word = full_expression_words.pop(0)
-                expression = ' '.join(full_expression_words)
+            full_expression_words = expression.split(' ')
+
+            leading_word = full_expression_words.pop(0)
+            expression = ' '.join(full_expression_words)
 
         elif len(args) == 2:
             leading_word = args[0]
@@ -370,7 +370,23 @@ class FromClause:
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
-                from_clause_token_list = parse_sql_clauses(sql_str)[1]
+
+                sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+
+                from_clause_token_list = []
+
+                start_appending = False
+
+                for sql_token in sql_tokens:
+                    if type(sql_token) == Token:
+                        if sql_token.value.lower() == 'from':
+                            start_appending = True
+
+                    elif type(sql_token) == Where:
+                        break
+
+                    if start_appending:
+                        from_clause_token_list.append(sql_token)
 
             elif type(args[0]) == list:
                 from_clause_token_list = args[0]
@@ -516,7 +532,7 @@ class Comparison:
                 comparison_str = args[0]
                 statement = sqlparse.parse(comparison_str)
                 sqlparse_comparison = statement[0].tokens[0]
-                # TODO Remove whitespace in parse_sql_clauses
+                # TODO Remove whitespace in before this point
                 comparison_tokens = remove_whitespace(sqlparse_comparison.tokens)
 
             elif type(args[0]) == list:
@@ -573,7 +589,30 @@ class Query(DataSet):
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
-                clauses_tuple = parse_sql_clauses(sql_str)
+
+                sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+
+                select_clause_token_list = []
+                from_clause_token_list = []
+                where_clause_token_list = []
+
+                clause_token_list = select_clause_token_list
+
+                for sql_token in sql_tokens:
+                    if type(sql_token).__name__ == 'Token':
+                        if sql_token.value.lower() == 'from':
+                            clause_token_list = from_clause_token_list
+
+                    elif type(sql_token).__name__ == 'Where':
+                        clause_token_list = where_clause_token_list
+
+                    clause_token_list.append(sql_token)
+
+                clauses_tuple = (
+                    select_clause_token_list,
+                    from_clause_token_list,
+                    where_clause_token_list,
+                )
 
                 # TODO Make sure to get the correct where clause when parsing sql with
                 #     more than one
