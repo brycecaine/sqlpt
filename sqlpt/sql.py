@@ -6,14 +6,14 @@ import pandas as pd
 import sqlparse
 import ttg
 from sqlalchemy import create_engine
-from sqlparse.sql import Identifier, Parenthesis, Token, Where
+from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
 from sqlpt.service import (get_field_alias, get_field_expression,
                            get_field_strs, get_join_kind, is_equivalent,
                            is_join, remove_whitespace)
 
 
-def get_sql_clauses(sql_str):
+def parse_sql_clauses(sql_str):
     sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
 
     select_clause_token_list = []
@@ -31,7 +31,13 @@ def get_sql_clauses(sql_str):
 
         clause_token_list.append(sql_token)
 
-    return select_clause_token_list, from_clause_token_list, where_clause_token_list
+    clauses_tuple = (
+        select_clause_token_list,
+        from_clause_token_list,
+        where_clause_token_list,
+    )
+
+    return clauses_tuple
 
 
 def parse_fields(field_token_list):
@@ -148,6 +154,8 @@ class SelectClause:
                 token_list.pop(0)
 
             if type(token_list[0]) == list:
+                field_token_list = token_list[0]
+            elif type(token_list[0]) == IdentifierList:
                 field_token_list = token_list[0]
             else:
                 field_token_list = [token_list[0]]
@@ -297,6 +305,7 @@ class Join:
 @dataclass
 class FromClause:
     # TODO: Accommodate DataSet here, not just Table instances
+    # TODO: Add another attribute for sql_str (orig?)
     from_table: Table
     joins: list
 
@@ -318,80 +327,91 @@ class FromClause:
             from_clause_sql = match_obj.group(2)
             where_clause_sql = match_obj.group(3)
 
+    def _parse_from_clause(self, token_list):
+        from_table = None
+        joins = []
+
+        if token_list:
+            # Remove 'from' keyword for now
+            token_list.pop(0)
+
+            # Get from_table
+            from_table_name = str(token_list.pop(0))
+            # May need to handle subquery; it will be a Parenthesis object
+            from_table = Table(from_table_name)
+
+            # Construct joins
+            kind = None
+            dataset = None
+            on_tokens = []
+
+            for item in token_list:
+                # Parse join item
+                if is_join(item):
+                    # Create join object with previously populated values
+                    # if applicable, and clear out values for a next one
+                    if kind and dataset and on_tokens:
+                        join_kind = deepcopy(str(kind))
+                        join_dataset = deepcopy(str(dataset))
+                        expression = get_expression(on_tokens)
+                        join_on_clause = OnClause(expression)
+
+                        join = Join(
+                            join_kind, join_dataset, join_on_clause)
+                        joins.append(join)
+
+                        kind = None
+                        dataset = None
+                        on_tokens = []
+
+                    kind = get_join_kind(item)
+
+                    continue
+
+                # Parse dataset item
+                if type(item) == Identifier:
+                    dataset = Table(str(item))
+
+                    continue
+
+                if type(item) == Parenthesis:
+                    sql_str = str(item)[1:-1]
+                    dataset = Query(sql_str)
+
+                    continue
+
+                # Parse comparison item
+                # TODO Left off here wrestling with whitespace
+                on_tokens.append(item)
+
+            # Create the last join
+            if kind and dataset and on_tokens:
+                expression = get_expression(on_tokens)
+                on_clause = OnClause(expression)
+
+                join = Join(kind, dataset, on_clause)
+                joins.append(join)
+
+        return (from_table, joins)
+
     # TODO: Allow kwargs; args xor kwargs; apply to all __init__ methods
     def __init__(self, *args):
         if len(args) == 1:
-            from_clause_tokens = args[0]
-            from_table = None
-            joins = []
+            if type(args[0]) == list:
+                from_clause_token_list = args[0]
 
-            if from_clause_tokens:
-                # Remove 'from' keyword for now
-                from_clause_tokens.pop(0)
+            if type(args[0]) == str:
+                sql_str = args[0]
+                from_clause_token_list = parse_sql_clauses(sql_str)[1]
 
-                # Get from_table
-                from_table_name = str(from_clause_tokens.pop(0))
-                # May need to handle subquery; it will be a Parenthesis object
-                from_table = Table(from_table_name)
-
-                # Construct joins
-                kind = None
-                dataset = None
-                on_tokens = []
-
-                for item in from_clause_tokens:
-                    # Parse join item
-                    if is_join(item):
-                        # Create join object with previously populated values
-                        # if applicable, and clear out values for a next one
-                        if kind and dataset and on_tokens:
-                            join_kind = deepcopy(str(kind))
-                            join_dataset = deepcopy(str(dataset))
-                            expression = get_expression(on_tokens)
-                            join_on_clause = OnClause(expression)
-
-                            join = Join(
-                                join_kind, join_dataset, join_on_clause)
-                            joins.append(join)
-
-                            kind = None
-                            dataset = None
-                            on_tokens = []
-
-                        kind = get_join_kind(item)
-
-                        continue
-
-                    # Parse dataset item
-                    if type(item) == Identifier:
-                        dataset = Table(str(item))
-
-                        continue
-
-                    if type(item) == Parenthesis:
-                        sql_str = str(item)[1:-1]
-                        dataset = Query(sql_str)
-
-                        continue
-
-                    # Parse comparison item
-                    # TODO Left off here wrestling with whitespace
-                    on_tokens.append(item)
-
-                # Create the last join
-                if kind and dataset and on_tokens:
-                    expression = get_expression(on_tokens)
-                    on_clause = OnClause(expression)
-
-                    join = Join(kind, dataset, on_clause)
-                    joins.append(join)
-
-            self.from_table = from_table
-            self.joins = joins
+            from_table, joins = self._parse_from_clause(from_clause_token_list)
 
         elif len(args) == 2:
-            self.from_table = args[0]
-            self.joins = args[1]
+            from_table = args[0]
+            joins = args[1]
+
+        self.from_table = from_table
+        self.joins = joins
 
     def __str__(self):
         from_clause_str = ''
@@ -542,7 +562,7 @@ class Query(DataSet):
         # TODO: What if a sole select clause object is passed in?
         if len(args) == 1:
             sql_str = args[0]
-            select_clause_tl, from_clause_tl, where_clause_tl = get_sql_clauses(sql_str)
+            clauses_tuple = parse_sql_clauses(sql_str)
 
             # TODO Make sure to get the correct where clause when parsing sql with
             #     more than one
@@ -550,9 +570,9 @@ class Query(DataSet):
             #     SyntaxWarning: null string passed to Literal; use Empty() instead
             # TODO Make this into a function and find a better place or it
             # TODO Allow constructing clauses by either a token list or sql str?
-            self.select_clause = SelectClause(select_clause_tl)
-            self.from_clause = FromClause(from_clause_tl)
-            where_expression = get_expression(where_clause_tl)
+            self.select_clause = SelectClause(clauses_tuple[0])
+            self.from_clause = FromClause(clauses_tuple[1])
+            where_expression = get_expression(clauses_tuple[2])
             self.where_clause = WhereClause(where_expression)
 
         elif len(args) == 2:

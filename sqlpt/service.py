@@ -8,14 +8,11 @@ from sqlparse.sql import Function, Identifier, IdentifierList, Token
 # TODO: Accommodate list of strings (in addn to token_list) here and everywhere
 def remove_whitespace(item_list, addl_chars=()):
     tokens = []
-    chars_to_exclude = [' ']
+    chars_to_exclude = [' ', '\n']
     chars_to_exclude.extend(addl_chars)
 
     for item in item_list:
-        if type(item) == Token:
-            value = item.value
-        else:
-            value = item
+        value = item.value if type(item) == Token else item
 
         if value not in chars_to_exclude:
             tokens.append(item)
