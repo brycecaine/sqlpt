@@ -18,16 +18,10 @@ class SqlStr(str):
     """ docstring tbd """
     def parse_fields(self):
         """ docstring tbd """
-        regex = (
-            r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')
+        sql_str = f'select {self}' if self[:6] != 'select' else self
 
-        pattern = re.compile(regex)
-
-        fields = []
-
-        for match in re.finditer(pattern, self):
-            field = Field(match.group('expression'), match.group('alias'))
-            fields.append(field)
+        token_list = parse_select_clause(sql_str)
+        fields = parse_fields_from_token_list(token_list)
 
         return fields
 
@@ -76,6 +70,72 @@ class Table(DataSet):
         return equivalent
 
 
+def parse_select_clause(sql_str):
+    """ docstring tbd """
+    sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+
+    token_list = []
+
+    for sql_token in sql_tokens:
+        if type(sql_token) == Token:
+            if sql_token.value.lower() == 'from':
+                break
+
+        elif type(sql_token) == Where:
+            break
+
+        token_list.append(sql_token)
+
+    return token_list
+
+
+def parse_fields_from_token_list(field_token_list):
+    """ docstring tbd """
+    regex = (
+        r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')  # noqa
+
+    # old version
+    # r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')
+
+    pattern = re.compile(regex)
+
+    fields = []
+
+    # FUTURE: Chain the "remove" functionality
+    for identifier in remove_whitespace(field_token_list, (';', ',')):
+        match_obj = re.match(pattern, str(identifier))
+        expression = match_obj.group('expression')
+        alias = match_obj.group('alias')
+
+        if expression.startswith('(select'):
+            query = Query(expression[1:-1])
+        else:
+            query = None
+
+        field = Field(expression, alias, query)
+        fields.append(field)
+
+    return fields
+
+
+def convert_token_list_to_fields(token_list):
+    """ docstring tbd """
+    # Remove "select" token
+    if str(token_list[0]) == 'select':
+        token_list.pop(0)
+
+    if type(token_list[0]) == list:
+        field_token_list = token_list[0]
+    elif type(token_list[0]) == IdentifierList:
+        field_token_list = token_list[0]
+    else:
+        field_token_list = [token_list[0]]
+
+    fields = parse_fields_from_token_list(field_token_list)
+
+    return fields
+
+
 @dataclass
 class SelectClause:
     """ docstring tbd """
@@ -85,40 +145,34 @@ class SelectClause:
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
-
-                sql_tokens = remove_whitespace(
-                    sqlparse.parse(sql_str)[0].tokens)
-
-                token_list = []
-
-                for sql_token in sql_tokens:
-                    if type(sql_token) == Token:
-                        if sql_token.value.lower() == 'from':
-                            break
-
-                    elif type(sql_token) == Where:
-                        break
-
-                    token_list.append(sql_token)
+                token_list = parse_select_clause(sql_str)
+                fields = convert_token_list_to_fields(token_list)
 
             elif type(args[0]) == list:
-                token_list = args[0]
 
-            # Remove "select" token
-            if str(token_list[0]) == 'select':
-                token_list.pop(0)
+                if args[0]:
+                    if type(args[0][0]) == Token:
+                        token_list = args[0]
+                        fields = convert_token_list_to_fields(token_list)
 
-            if type(token_list[0]) == list:
-                field_token_list = token_list[0]
-            elif type(token_list[0]) == IdentifierList:
-                field_token_list = token_list[0]
-            else:
-                field_token_list = [token_list[0]]
+                    elif type(args[0][0]) == Field:
+                        fields = args[0]
 
-            fields = self.parse_fields(field_token_list)
+                    else:
+                        if args[0][0].lower() == 'select':
+                            args[0].pop(0)
 
-        # TODO Figure out how to handle a list of Field objects passed in as
-        #      the single positional argument
+                        if type(args[0][0]) == list:
+                            field_strs = args[0][0]
+                        else:
+                            field_strs = args[0]
+
+                        sql_str = ', '.join(field_strs)
+                        token_list = parse_select_clause(sql_str)
+                        fields = convert_token_list_to_fields(token_list)
+                else:
+                    fields = []
+
         self.fields = fields
 
     def __hash__(self):
@@ -128,30 +182,6 @@ class SelectClause:
         select_clause_str = f"select {', '.join(self.field_strs)}"
 
         return select_clause_str
-
-    def parse_fields(self, field_token_list):
-        """ docstring tbd """
-        fields = []
-
-        regex = r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'  # noqa
-        pattern = re.compile(regex)
-
-        # FUTURE: Chain the "remove" functionality
-        for identifier in remove_whitespace(field_token_list, (';', ',')):
-            match_obj = re.match(pattern, str(identifier))
-            expression = match_obj.group('expression')
-            alias = match_obj.group('alias')
-
-            if expression.startswith('(select'):
-                query = Query(expression[1:-1])
-            else:
-                query = None
-
-            field_args = (expression, alias, query)
-            field = Field(*field_args)
-            fields.append(field)
-
-        return fields
 
     @property
     def field_strs(self):
@@ -568,11 +598,13 @@ class Query(DataSet):
                 sql_tokens = (
                     remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
 
+                clause_token_list = []
                 select_clause_token_list = []
                 from_clause_token_list = []
                 where_clause_token_list = []
 
-                clause_token_list = select_clause_token_list
+                if str(sql_tokens[0]).lower() == 'select':
+                    clause_token_list = select_clause_token_list
 
                 for sql_token in sql_tokens:
                     if type(sql_token).__name__ == 'Token':
