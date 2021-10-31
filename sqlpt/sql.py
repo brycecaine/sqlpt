@@ -497,7 +497,6 @@ class FromClause:
                     continue
 
                 # Parse comparison token
-                # TODO Left off here wrestling with whitespace
                 on_tokens.append(token)
 
             # Create the last join
