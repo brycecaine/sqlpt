@@ -649,7 +649,6 @@ class Query(DataSet):
     where_clause: WhereClause
 
     def __init__(self, *args):
-        # TODO: What if a sole select clause object is passed in?
         if len(args) == 1:
             if type(args[0]) == str:
                 # TODO: Disinguish between s_str and sql_str everywhere
@@ -703,7 +702,8 @@ class Query(DataSet):
         string = str(self.select_clause)
 
         if self.from_clause:
-            string += f' {self.from_clause}'
+            if str(self.from_clause):
+                string += f' {self.from_clause}'
 
         if hasattr(self, 'where_clause'):
             if self.where_clause:

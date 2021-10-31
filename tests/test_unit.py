@@ -225,6 +225,19 @@ class ParseTestCase(TestCase):
         self.assertEqual(type(query.from_clause.from_dataset), Query)
         self.assertEqual(actual_sql_str, expected_sql_str)
 
+    def test_sole_select_clause(self):
+        """ docstring tbd """
+        sql_str = '''
+            select id
+            '''
+
+        query = Query(sql_str)
+
+        actual_sql_str = str(query)
+        expected_sql_str = service.remove_whitespace_from_str(sql_str)
+
+        self.assertEqual(actual_sql_str, expected_sql_str)
+
 
 class FunctionTestCase(TestCase):
     """ docstring tbd """
