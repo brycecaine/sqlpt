@@ -77,49 +77,6 @@ class Table(DataSet):
 
 
 @dataclass
-class Field:
-    """ docstring tbd """
-    expression: str
-    alias: str
-
-    def __init__(self, *args):
-        if len(args) == 1:
-            if type(args[0]) == str:
-                field_str = args[0]
-                expression = get_field_expression(field_str)
-                alias = get_field_alias(field_str)
-                # TODO Get query here
-
-            elif type(args[0]) == list:
-                # TODO Untested
-                expression = args[0][0]
-                alias = args[0][1]
-                # TODO Get query here
-
-        elif len(args) == 2:
-            expression = args[0]
-            alias = args[1]
-            # TODO Get query here (assign to None?)
-
-        elif len(args) == 3:
-            expression = args[0]
-            alias = args[1]
-            self.query = args[2]
-
-        self.expression = expression
-        self.alias = alias
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def __str__(self):
-        alias = f' {self.alias}' if self.alias else ''
-        description = f'{self.expression}{alias}'
-
-        return description
-
-
-@dataclass
 class SelectClause:
     """ docstring tbd """
     fields: list
@@ -797,3 +754,47 @@ class Query(DataSet):
         comparison = Comparison(subquery_str, operator, value)
 
         self.where_clause.add_comparison(comparison)
+
+
+@dataclass
+class Field:
+    """ docstring tbd """
+    expression: str
+    alias: str
+    query: Query
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            if type(args[0]) == str:
+                field_str = args[0]
+                expression = get_field_expression(field_str)
+                alias = get_field_alias(field_str)
+                query = Query(expression)
+
+            elif type(args[0]) == list:
+                expression = args[0][0]
+                alias = args[0][1]
+                query = Query(expression)
+
+        elif len(args) == 2:
+            expression = args[0]
+            alias = args[1]
+            query = None
+
+        elif len(args) == 3:
+            expression = args[0]
+            alias = args[1]
+            query = args[2]
+
+        self.expression = expression
+        self.alias = alias
+        self.query = query
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __str__(self):
+        alias = f' {self.alias}' if self.alias else ''
+        description = f'{self.expression}{alias}'
+
+        return description

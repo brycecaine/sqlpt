@@ -488,3 +488,41 @@ class ConversionTestCase(TestCase):
         # TODO: Eventually assertEqual
         self.assertTrue(input_query)
         self.assertTrue(output_query)
+
+
+# TODO: Make a test case for each class in sql.py
+class FieldTestCase(TestCase):
+    """ docstring tbd """
+    def test_field_str_normal(self):
+        """ docstring tbd """
+        field = Field('exp a')
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, 'exp')
+        self.assertEqual(field.alias, 'a')
+
+    def test_field_list_normal(self):
+        """ docstring tbd """
+        field = Field(['exp', 'a'])
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, 'exp')
+        self.assertEqual(field.alias, 'a')
+
+    def test_field_str_subquery(self):
+        """ docstring tbd """
+        field = Field('(select fld from tbl) a')
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, '(select fld from tbl)')
+        self.assertEqual(field.alias, 'a')
+        self.assertEqual(type(field.query), Query)
+
+    def test_field_list_subquery(self):
+        """ docstring tbd """
+        field = Field(['(select fld from tbl)', 'a'])
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, '(select fld from tbl)')
+        self.assertEqual(field.alias, 'a')
+        self.assertEqual(type(field.query), Query)
