@@ -220,24 +220,8 @@ class ExpressionClause:
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
-
-                sql_tokens = (
-                    remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
-
-                expression_clause_token_list = []
-
-                start_appending = False
-
-                for sql_token in sql_tokens:
-                    if type(sql_token) == Token:
-                        if sql_token.value.lower() == 'on':
-                            start_appending = True
-
-                    if type(sql_token) == Where:
-                        start_appending = True
-
-                    if start_appending:
-                        expression_clause_token_list.append(sql_token)
+                expression_clause_token_list = (
+                    self.parse_expression_clause(sql_str))
 
             elif type(args[0]) == list:
                 expression_clause_token_list = args[0]
@@ -302,8 +286,32 @@ class ExpressionClause:
         raise Exception(f'Needs implementation: {parameter_fields}')
 
 
+def parse_on_clause(sql_str):
+    sql_tokens = (
+        remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+
+    on_clause_token_list = []
+
+    start_appending = False
+
+    for sql_token in sql_tokens:
+        if type(sql_token) == Token:
+            if sql_token.value.lower() == 'on':
+                start_appending = True
+
+        if start_appending:
+            on_clause_token_list.append(sql_token)
+
+    return on_clause_token_list
+
+
 class OnClause(ExpressionClause):
     """ docstring tbd """
+    def parse_expression_clause(self, sql_str):
+        """ docstring tbd """
+        token_list = parse_on_clause(sql_str)
+
+        return token_list
 
 
 @dataclass
@@ -585,8 +593,35 @@ class Comparison:
         return equivalent
 
 
+def parse_where_clause(sql_str):
+    sql_tokens = (
+        remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+
+    where_clause_token_list = []
+
+    start_appending = False
+
+    for sql_token in sql_tokens:
+        if type(sql_token) == Token:
+            if sql_token.value.lower() == 'from':
+                continue
+
+        elif type(sql_token) == Where:
+            start_appending = True
+
+        if start_appending:
+            where_clause_token_list.append(sql_token)
+
+    return where_clause_token_list
+
+
 class WhereClause(ExpressionClause):
     """ docstring tbd """
+    def parse_expression_clause(self, sql_str):
+        """ docstring tbd """
+        token_list = parse_where_clause(sql_str)
+
+        return token_list
 
 
 @dataclass
@@ -602,42 +637,14 @@ class Query(DataSet):
             if type(args[0]) == str:
                 sql_str = args[0]
 
-                sql_tokens = (
-                    remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
-
-                clause_token_list = []
-                select_clause_token_list = []
-                from_clause_token_list = []
-                where_clause_token_list = []
-
-                if str(sql_tokens[0]).lower() == 'select':
-                    clause_token_list = select_clause_token_list
-
-                for sql_token in sql_tokens:
-                    if type(sql_token).__name__ == 'Token':
-                        if sql_token.value.lower() == 'from':
-                            clause_token_list = from_clause_token_list
-
-                    elif type(sql_token).__name__ == 'Where':
-                        clause_token_list = where_clause_token_list
-
-                    clause_token_list.append(sql_token)
-
-                clauses_tuple = (
-                    select_clause_token_list,
-                    from_clause_token_list,
-                    where_clause_token_list,
-                )
-
                 # TODO Make sure to get the correct where clause when parsing
                 #      sql with more than one
                 # TODO Figure out why leaving self.expression as '' results in:
                 #      SyntaxWarning: null string passed to Literal; use
                 #      Empty() instead
-                # TODO Make this into a function and find a better place or it
                 select_clause = SelectClause(sql_str)
                 from_clause = FromClause(sql_str)
-                where_clause = WhereClause(clauses_tuple[2])
+                where_clause = WhereClause(sql_str)
 
             elif type(args[0]) == list:
                 select_clause = args[0][0]
