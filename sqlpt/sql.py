@@ -44,6 +44,20 @@ class SqlStr(str):
         return field
 
 
+def get_dataset(token):
+    """ docstring tbd """
+    dataset = None
+
+    if type(token) == Parenthesis:
+        sql_str = str(token)[1:-1]
+        dataset = Query(sql_str)
+
+    else:
+        dataset = Table(str(token))
+
+    return dataset
+
+
 @dataclass
 class DataSet:
     """ docstring tbd """
@@ -392,9 +406,8 @@ def parse_from_clause(sql_str):
 @dataclass
 class FromClause:
     """ docstring tbd """
-    # TODO: Accommodate DataSet here, not just Table instances
     # TODO: Add another attribute for sql_str (orig?)
-    from_table: Table
+    from_dataset: DataSet
     joins: list
 
     # TODO: Allow kwargs; args xor kwargs; apply to all __init__ methods
@@ -407,13 +420,14 @@ class FromClause:
             elif type(args[0]) == list:
                 from_clause_token_list = args[0]
 
-            from_table, joins = self._parse_from_clause(from_clause_token_list)
+            from_dataset, joins = self._parse_from_clause(
+                from_clause_token_list)
 
         elif len(args) == 2:
-            from_table = args[0]
+            from_dataset = args[0]
             joins = args[1]
 
-        self.from_table = from_table
+        self.from_dataset = from_dataset
         self.joins = joins
 
     def __hash__(self):
@@ -422,36 +436,42 @@ class FromClause:
     def __str__(self):
         from_clause_str = ''
 
-        if self.from_table:
-            from_clause_str = f'from {self.from_table}'
+        if self.from_dataset:
+            if type(self.from_dataset) == Query:
+                dataset_str = f'({self.from_dataset})'
+
+            else:
+                dataset_str = str(self.from_dataset)
+
+            from_clause_str = f'from {dataset_str}'
 
             for join in self.joins:
                 from_clause_str += f'{join}'
 
         return from_clause_str
 
+    # TODO: Reconcile this and parse_from_clause
     def _parse_from_clause(self, token_list):
         """ docstring tbd """
-        from_table = None
+        from_dataset = None
         joins = []
 
         if token_list:
             # Remove 'from' keyword for now
             token_list.pop(0)
 
-            # Get from_table
-            from_table_name = str(token_list.pop(0))
-            # May need to handle subquery; it will be a Parenthesis object
-            from_table = Table(from_table_name)
+            # Get from_dataset
+            token = token_list.pop(0)
+            from_dataset = get_dataset(token)
 
             # Construct joins
             kind = None
             dataset = None
             on_tokens = []
 
-            for item in token_list:
-                # Parse join item
-                if is_join(item):
+            for token in token_list:
+                # Parse join token
+                if is_join(token):
                     # Create join object with previously populated values
                     # if applicable, and clear out values for a next one
                     if kind and dataset and on_tokens:
@@ -467,25 +487,19 @@ class FromClause:
                         dataset = None
                         on_tokens = []
 
-                    kind = get_join_kind(item)
+                    kind = get_join_kind(token)
 
                     continue
 
-                # Parse dataset item
-                if type(item) == Identifier:
-                    dataset = Table(str(item))
+                # Parse dataset token
+                if type(token) in (Identifier, Parenthesis):
+                    dataset = get_dataset(token)
 
                     continue
 
-                if type(item) == Parenthesis:
-                    sql_str = str(item)[1:-1]
-                    dataset = Query(sql_str)
-
-                    continue
-
-                # Parse comparison item
+                # Parse comparison token
                 # TODO Left off here wrestling with whitespace
-                on_tokens.append(item)
+                on_tokens.append(token)
 
             # Create the last join
             if kind and dataset and on_tokens:
@@ -494,7 +508,7 @@ class FromClause:
                 join = Join(kind, dataset, on_clause)
                 joins.append(join)
 
-        return from_table, joins
+        return from_dataset, joins
 
     def is_equivalent_to(self, other):
         """ docstring tbd """
@@ -504,11 +518,11 @@ class FromClause:
             # TODO: Allow for equivalence if tables and comparisons are out of
             # order
 
-            equivalent = (self.from_table == other.from_table
+            equivalent = (self.from_dataset == other.from_dataset
                           or
-                          (self.from_table == other.first_join_dataset()
+                          (self.from_dataset == other.first_join_dataset()
                            and
-                           other.from_table == self.first_join_dataset()))
+                           other.from_dataset == self.first_join_dataset()))
 
             # TODO: Work this out
             if equivalent:
