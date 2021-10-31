@@ -76,15 +76,16 @@ def parse_select_clause(sql_str):
 
     token_list = []
 
-    for sql_token in sql_tokens:
-        if type(sql_token) == Token:
-            if sql_token.value.lower() == 'from':
+    if str(sql_tokens[0]).lower() == 'select':
+        for sql_token in sql_tokens:
+            if type(sql_token) == Token:
+                if sql_token.value.lower() == 'from':
+                    break
+
+            elif type(sql_token) == Where:
                 break
 
-        elif type(sql_token) == Where:
-            break
-
-        token_list.append(sql_token)
+            token_list.append(sql_token)
 
     return token_list
 
@@ -121,17 +122,20 @@ def parse_fields_from_token_list(field_token_list):
 def convert_token_list_to_fields(token_list):
     """ docstring tbd """
     # Remove "select" token
-    if str(token_list[0]) == 'select':
-        token_list.pop(0)
+    fields = []
 
-    if type(token_list[0]) == list:
-        field_token_list = token_list[0]
-    elif type(token_list[0]) == IdentifierList:
-        field_token_list = token_list[0]
-    else:
-        field_token_list = [token_list[0]]
+    if token_list:
+        if str(token_list[0]) == 'select':
+            token_list.pop(0)
 
-    fields = parse_fields_from_token_list(field_token_list)
+        if type(token_list[0]) == list:
+            field_token_list = token_list[0]
+        elif type(token_list[0]) == IdentifierList:
+            field_token_list = token_list[0]
+        else:
+            field_token_list = [token_list[0]]
+
+        fields = parse_fields_from_token_list(field_token_list)
 
     return fields
 
@@ -159,15 +163,13 @@ class SelectClause:
                         fields = args[0]
 
                     else:
-                        if args[0][0].lower() == 'select':
-                            args[0].pop(0)
-
-                        if type(args[0][0]) == list:
-                            field_strs = args[0][0]
+                        if type(args[0][1]) == list:
+                            field_strs = args[0][1]
                         else:
-                            field_strs = args[0]
+                            field_strs = args[0][1:]
 
                         sql_str = ', '.join(field_strs)
+                        sql_str = f'select {sql_str}'
                         token_list = parse_select_clause(sql_str)
                         fields = convert_token_list_to_fields(token_list)
                 else:
@@ -628,7 +630,7 @@ class Query(DataSet):
                 #      SyntaxWarning: null string passed to Literal; use
                 #      Empty() instead
                 # TODO Make this into a function and find a better place or it
-                select_clause = SelectClause(clauses_tuple[0])
+                select_clause = SelectClause(sql_str)
                 from_clause = FromClause(clauses_tuple[1])
                 where_clause = WhereClause(clauses_tuple[2])
 
