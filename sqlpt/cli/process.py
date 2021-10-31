@@ -72,7 +72,8 @@ def process(db_str, input_dir, output_dir, dry_run):
             if similar_processing_choice == 2:
                 # fused_query = fuse(incoming_query, query)
                 # queries.append(fused_query)
-                print(f'fusing {query}')
+                # fusing {query}
+                pass
 
             queries.append(incoming_query)
 

@@ -1,3 +1,5 @@
+""" docstring tbd """
+
 import re
 from copy import deepcopy
 from dataclasses import dataclass
@@ -13,8 +15,11 @@ from sqlpt.service import (get_field_alias, get_field_expression,
 
 
 class SqlStr(str):
+    """ docstring tbd """
     def parse_fields(self):
-        regex = r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
+        """ docstring tbd """
+        regex = (
+            r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')
 
         pattern = re.compile(regex)
 
@@ -27,8 +32,9 @@ class SqlStr(str):
         return fields
 
     def parse_field(self):
+        """ docstring tbd """
         regex = r'(\w*)?(\(.*\))?[ ]*(\w*)'
-        match_obj = re.match(regex, self, re.M|re.I)
+        match_obj = re.match(regex, self, re.M | re.I)
 
         expression_part_1 = match_obj.group(1)
         expression_part_2 = match_obj.group(2)
@@ -46,11 +52,12 @@ class SqlStr(str):
 
 @dataclass
 class DataSet:
-    pass
+    """ docstring tbd """
 
 
 @dataclass
 class Table(DataSet):
+    """ docstring tbd """
     name: str
 
     def __hash__(self):
@@ -60,6 +67,7 @@ class Table(DataSet):
         return self.name
 
     def is_equivalent_to(self, other):
+        """ docstring tbd """
         equivalent = False
 
         if isinstance(other, self.__class__):
@@ -70,6 +78,7 @@ class Table(DataSet):
 
 @dataclass
 class Field:
+    """ docstring tbd """
     expression: str
     alias: str
 
@@ -112,6 +121,7 @@ class Field:
 
 @dataclass
 class SelectClause:
+    """ docstring tbd """
     fields: list
 
     def __init__(self, *args):
@@ -119,7 +129,8 @@ class SelectClause:
             if type(args[0]) == str:
                 sql_str = args[0]
 
-                sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+                sql_tokens = remove_whitespace(
+                    sqlparse.parse(sql_str)[0].tokens)
 
                 token_list = []
 
@@ -149,7 +160,8 @@ class SelectClause:
 
             fields = self.parse_fields(field_token_list)
 
-        # TODO Figure out how to handle a list of Field objects passed in as the single positional argument
+        # TODO Figure out how to handle a list of Field objects passed in as
+        #      the single positional argument
         self.fields = fields
 
     def __hash__(self):
@@ -161,12 +173,13 @@ class SelectClause:
         return select_clause_str
 
     def parse_fields(self, field_token_list):
+        """ docstring tbd """
         fields = []
 
-        regex = r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'
+        regex = r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)'  # noqa
         pattern = re.compile(regex)
 
-        # FUTR: Chain the "remove" functionality
+        # FUTURE: Chain the "remove" functionality
         for identifier in remove_whitespace(field_token_list, (';', ',')):
             match_obj = re.match(pattern, str(identifier))
             expression = match_obj.group('expression')
@@ -185,15 +198,18 @@ class SelectClause:
 
     @property
     def field_strs(self):
+        """ docstring tbd """
         field_strs = [str(field) for field in self.fields]
 
         return field_strs
 
     def add_field(self, *args):
+        """ docstring tbd """
         field = Field(*args)
         self.fields.append(field)
 
     def is_equivalent_to(self, other):
+        """ docstring tbd """
         equivalent = False
 
         if isinstance(other, self.__class__):
@@ -202,11 +218,12 @@ class SelectClause:
         return equivalent
 
     def fuse(self, select_clause):
-        pass
+        """ docstring tbd """
 
 
 @dataclass
 class ExpressionClause:
+    """ docstring tbd """
     leading_word: str
     expression: str
 
@@ -215,7 +232,8 @@ class ExpressionClause:
             if type(args[0]) == str:
                 sql_str = args[0]
 
-                sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+                sql_tokens = (
+                    remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
 
                 expression_clause_token_list = []
 
@@ -271,16 +289,15 @@ class ExpressionClause:
         return string
 
     def is_equivalent_to(self, other):
+        """ docstring tbd """
         equivalent = (get_truth_table_result(self.expression) ==
                       get_truth_table_result(other.expression))
 
         return equivalent
 
     def parameterize(self, parameter_fields):
-        raise Exception('Needs implementation')
-        # TODO Start with matching the comparison, kind of like this:
-        # expr_w_parens = re.sub(r'(\w+\s*=\s*\w+)', r'(\1)', expr)
-        """
+        """ docstring tbd
+
         for comparison in self.comparisons:
             left_term = comparison.left_term
 
@@ -290,13 +307,19 @@ class ExpressionClause:
         return self
         """
 
+        # TODO Start with matching the comparison, kind of like this:
+        #      expr_w_parens = re.sub(r'(\w+\s*=\s*\w+)', r'(\1)', expr)
+
+        raise Exception(f'Needs implementation: {parameter_fields}')
+
 
 class OnClause(ExpressionClause):
-    pass
+    """ docstring tbd """
 
 
 @dataclass
 class Join:
+    """ docstring tbd """
     kind: str
     dataset: DataSet
     on_clause: OnClause
@@ -324,12 +347,17 @@ class Join:
         return hash(str(self))
 
     def __str__(self):
-        dataset_str = f'({self.dataset})' if isinstance(self.dataset, Query) else self.dataset
+        if isinstance(self.dataset, Query):
+            dataset_str = f'({self.dataset})'
+        else:
+            dataset_str = self.dataset
+
         join_str = f' {self.kind} {dataset_str} {self.on_clause}'
 
         return join_str
 
     def is_equivalent_to(self, other):
+        """ docstring tbd """
         equivalent = (self.kind == other.kind
                       and
                       is_equivalent([self.dataset], [other.dataset])
@@ -341,25 +369,11 @@ class Join:
 
 @dataclass
 class FromClause:
+    """ docstring tbd """
     # TODO: Accommodate DataSet here, not just Table instances
     # TODO: Add another attribute for sql_str (orig?)
     from_table: Table
     joins: list
-
-    # TODO Move away from sqlparse in favor of regex's here and elsewhere
-    def __init__new_now_old(self, *args):
-        sql_str = args[0]
-        # query_sql = 'select hi, yo from dual join laud on a = b WHERE i = j'
-        # query_sql = 'select hi from dual'
-        # query_regex = r'/(select\s+.+\s+)(from\s+.*?\s+)(where\s+.+|$);?/i'
-        query_regex = r'(select\s+.*?\s+)(from\s+.*?\s*)(where\s+.+|$);?'
-        # query_regex = r'(.*)'
-        match_obj = re.match(query_regex, sql_str, re.M|re.I)
-
-        if match_obj:
-            select_clause_sql = match_obj.group(1)
-            from_clause_sql = match_obj.group(2)
-            where_clause_sql = match_obj.group(3)
 
     # TODO: Allow kwargs; args xor kwargs; apply to all __init__ methods
     def __init__(self, *args):
@@ -367,7 +381,8 @@ class FromClause:
             if type(args[0]) == str:
                 sql_str = args[0]
 
-                sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+                sql_tokens = (
+                    remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
 
                 from_clause_token_list = []
 
@@ -411,6 +426,7 @@ class FromClause:
         return from_clause_str
 
     def _parse_from_clause(self, token_list):
+        """ docstring tbd """
         from_table = None
         joins = []
 
@@ -476,6 +492,7 @@ class FromClause:
         return from_table, joins
 
     def is_equivalent_to(self, other):
+        """ docstring tbd """
         equivalent = False
 
         if isinstance(other, self.__class__):
@@ -505,6 +522,7 @@ class FromClause:
         return equivalent
 
     def first_join_dataset(self):
+        """ docstring tbd """
         first_join = self.joins[0]
 
         if first_join.kind == 'join':
@@ -518,6 +536,7 @@ class FromClause:
 # TODO Remove this maybe? No longer needed?
 @dataclass
 class Comparison:
+    """ docstring tbd """
     left_term: str
     operator: str
     right_term: str
@@ -529,7 +548,8 @@ class Comparison:
                 statement = sqlparse.parse(comparison_str)
                 sqlparse_comparison = statement[0].tokens[0]
                 # TODO Remove whitespace in before this point
-                comparison_tokens = remove_whitespace(sqlparse_comparison.tokens)
+                comparison_tokens = (
+                    remove_whitespace(sqlparse_comparison.tokens))
 
             elif type(args[0]) == list:
                 # TODO Untested
@@ -554,6 +574,7 @@ class Comparison:
         return string
 
     def is_equivalent_to(self, other):
+        """ docstring tbd """
         equivalent = False
 
         if isinstance(other, self.__class__):
@@ -571,11 +592,12 @@ class Comparison:
 
 
 class WhereClause(ExpressionClause):
-    pass
+    """ docstring tbd """
 
 
 @dataclass
 class Query(DataSet):
+    """ docstring tbd """
     select_clause: SelectClause
     from_clause: FromClause
     where_clause: WhereClause
@@ -586,7 +608,8 @@ class Query(DataSet):
             if type(args[0]) == str:
                 sql_str = args[0]
 
-                sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+                sql_tokens = (
+                    remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
 
                 select_clause_token_list = []
                 from_clause_token_list = []
@@ -610,10 +633,11 @@ class Query(DataSet):
                     where_clause_token_list,
                 )
 
-                # TODO Make sure to get the correct where clause when parsing sql with
-                #     more than one
+                # TODO Make sure to get the correct where clause when parsing
+                #      sql with more than one
                 # TODO Figure out why leaving self.expression as '' results in:
-                #     SyntaxWarning: null string passed to Literal; use Empty() instead
+                #      SyntaxWarning: null string passed to Literal; use
+                #      Empty() instead
                 # TODO Make this into a function and find a better place or it
                 select_clause = SelectClause(clauses_tuple[0])
                 from_clause = FromClause(clauses_tuple[1])
@@ -642,19 +666,19 @@ class Query(DataSet):
         return hash(str(self))
 
     def __eq__(self, other):
-        query_egual = False
+        query_equal = False
 
         if isinstance(other, Query):
             select_clauses_equal = self.select_clause == other.select_clause
             from_clauses_equal = self._optional_clause_equal(other, 'from')
             where_clauses_equal = self._optional_clause_equal(other, 'where')
 
-            query_egual = (
+            query_equal = (
                 select_clauses_equal and
                 from_clauses_equal and
                 where_clauses_equal)
 
-        return query_egual
+        return query_equal
 
     def __str__(self):
         string = str(self.select_clause)
@@ -669,6 +693,7 @@ class Query(DataSet):
         return string
 
     def _optional_clause_equal(self, other, kind):
+        """ docstring tbd """
         clauses_equal = False
 
         self_has_clause = hasattr(self, f'{kind}_clause')
@@ -688,17 +713,20 @@ class Query(DataSet):
 
     @property
     def db_conn(self):
+        """ docstring tbd """
         self.db_conn = create_engine('sqlite:///sqlpt/college.db')
 
         return self.db_conn
 
     @property
     def dataframe(self):
-        df = pd.read_sql_query(self.__str__(), self.db_conn)
+        """ docstring tbd """
+        data_frame = pd.read_sql_query(self.__str__(), self.db_conn)
 
-        return df
+        return data_frame
 
     def fuse(self, query):
+        """ docstring tbd """
         # FUTURE: Figure out how to fuse from clauses
         if self.from_clause == query.from_clause:
             self.select_clause.fuse(query.select_clause)
@@ -707,11 +735,13 @@ class Query(DataSet):
         return self
 
     def parameterize(self, parameter_fields):
+        """ docstring tbd """
         self.where_clause.parameterize(parameter_fields)
 
         return self
 
     def bind_params(self, **kwargs):
+        """ docstring tbd """
         for key, value in kwargs.items():
             bound_sql_str = self.__str__().replace(f':{key}', str(value))
             self.__init__(bound_sql_str)
@@ -719,36 +749,44 @@ class Query(DataSet):
         return self
 
     def format_sql(self):
+        """ docstring tbd """
         formatted_sql = sqlparse.format(self.__str__())
 
         return formatted_sql
 
     def describe(self):
+        """ docstring tbd """
         description = self.dataframe.describe()
 
         return description
 
-    def head(self, n=5):
-        head_data = self.dataframe.head(n)
+    def head(self, num_rows=5):
+        """ docstring tbd """
+        head_data = self.dataframe.head(num_rows)
 
         return head_data
 
     def output_sql_file(self, path):
+        """ docstring tbd """
         with open(path, 'wt') as sql_file:
             sql_file.write(self.format_sql())
 
     def output_data_file(self, path):
+        """ docstring tbd """
         self.dataframe.to_csv(path, index=False)
 
     def subquery_str(self):
+        """ docstring tbd """
         string = f'({self.__str__()})'
 
         return string
 
     def add_subquery_field(self, subquery_str, alias):
+        """ docstring tbd """
         self.select_clause.add_field(subquery_str, alias)
 
     def filter_by_subquery(self, subquery_str, operator, value):
+        """ docstring tbd """
         if type(value) == list:
             if operator == '=':
                 operator = 'in'

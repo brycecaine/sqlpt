@@ -1,62 +1,17 @@
+""" docstring tbd """
+
 from unittest import TestCase
 
 from sqlpt import service
 from sqlpt.sql import (Field, FromClause, Join, OnClause, Query, SelectClause,
-                       Table, WhereClause,
-                       SqlStr)
-
-
-# TODO Delete this when StringTestCase, TokenListTestCase, and
-#      StringListTestCase are done
-class ClassTestCase(TestCase):
-    def _test(self, sql_str, expected_select_clause, expected_from_clause,
-              expected_where_clause):
-        query = Query(sql_str)
-
-        expected_query = Query(
-            expected_select_clause,
-            expected_from_clause,
-            expected_where_clause)
-
-        self.assertEqual(query, expected_query)
-        self.assertEqual(query.select_clause, expected_select_clause)
-        self.assertEqual(query.from_clause, expected_from_clause)
-        self.assertEqual(query.where_clause, expected_where_clause)
-
-    def test_query_basic(self):
-        sql_str = "select * from dual where dummy = 'X'"
-
-        expected_select_clause = SelectClause(['*'])
-        expected_from_clause = FromClause(Table(name='dual'), [])
-        expected_where_clause = WhereClause("where dummy = 'X'")
-
-        self._test(sql_str, expected_select_clause, expected_from_clause,
-                   expected_where_clause)
-
-    def test_query_single_field(self):
-        sql_str = "select field_1 from dual where dummy = 'X'"
-
-        expected_select_clause = SelectClause(['field_1'])
-        expected_from_clause = FromClause(Table(name='dual'), [])
-        expected_where_clause = WhereClause("where dummy = 'X'")
-
-        self._test(sql_str, expected_select_clause, expected_from_clause,
-                   expected_where_clause)
-
-    def test_query_multiple_fields(self):
-        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
-
-        expected_select_clause = SelectClause(['select', ['field_1', 'field_2']])
-        expected_from_clause = FromClause(Table(name='dual'), [])
-        expected_where_clause = WhereClause("where dummy = 'X'")
-
-        self._test(sql_str, expected_select_clause, expected_from_clause,
-                   expected_where_clause)
+                       SqlStr, Table, WhereClause)
 
 
 class StringTestCase(TestCase):
+    """ docstring tbd """
     def _test(self, sql_str, expected_select_clause, expected_from_clause,
               expected_where_clause):
+        """ docstring tbd """
         query = Query(sql_str)
 
         expected_query = Query(
@@ -70,6 +25,7 @@ class StringTestCase(TestCase):
         self.assertEqual(query.where_clause, expected_where_clause)
 
     def test_query_basic(self):
+        """ docstring tbd """
         sql_str = "select * from dual where dummy = 'X'"
 
         expected_select_clause = SelectClause('select *')
@@ -80,9 +36,10 @@ class StringTestCase(TestCase):
                    expected_where_clause)
 
     def test_query_single_field(self):
-        sql_str = "select field_1 from dual where dummy = 'X'"
+        """ docstring tbd """
+        sql_str = "select fld_1 from dual where dummy = 'X'"
 
-        expected_select_clause = SelectClause('select field_1')
+        expected_select_clause = SelectClause('select fld_1')
         expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause("where dummy = 'X'")
 
@@ -90,9 +47,10 @@ class StringTestCase(TestCase):
                    expected_where_clause)
 
     def test_query_multiple_fields(self):
-        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
+        """ docstring tbd """
+        sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
 
-        expected_select_clause = SelectClause('select field_1, field_2')
+        expected_select_clause = SelectClause('select fld_1, fld_2')
         expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause("where dummy = 'X'")
 
@@ -100,7 +58,8 @@ class StringTestCase(TestCase):
                    expected_where_clause)
 
     def test_select_clause(self):
-        sql_str = 'select field_1, field_2'
+        """ docstring tbd """
+        sql_str = 'select fld_1, fld_2'
 
         actual_select_clause = str(SelectClause(sql_str))
         expected_select_clause = sql_str
@@ -108,14 +67,16 @@ class StringTestCase(TestCase):
         self.assertEqual(actual_select_clause, expected_select_clause)
 
     def test_select_clause_from_full_query_sql_str(self):
-        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
+        """ docstring tbd """
+        sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
 
         actual_select_clause = str(SelectClause(sql_str))
-        expected_select_clause = 'select field_1, field_2'
+        expected_select_clause = 'select fld_1, fld_2'
 
         self.assertEqual(actual_select_clause, expected_select_clause)
 
     def test_from_clause(self):
+        """ docstring tbd """
         sql_str = 'from dual'
 
         actual_from_clause = str(FromClause(sql_str))
@@ -124,7 +85,8 @@ class StringTestCase(TestCase):
         self.assertEqual(actual_from_clause, expected_from_clause)
 
     def test_from_clause_from_full_query_sql_str(self):
-        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
+        """ docstring tbd """
+        sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
 
         actual_from_clause = str(FromClause(sql_str))
         expected_from_clause = 'from dual'
@@ -132,6 +94,7 @@ class StringTestCase(TestCase):
         self.assertEqual(actual_from_clause, expected_from_clause)
 
     def test_where_clause(self):
+        """ docstring tbd """
         sql_str = "where dummy = 'X'"
 
         actual_where_clause = str(WhereClause(sql_str))
@@ -140,7 +103,8 @@ class StringTestCase(TestCase):
         self.assertEqual(actual_where_clause, expected_where_clause)
 
     def test_where_clause_from_full_query_sql_str(self):
-        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
+        """ docstring tbd """
+        sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
 
         actual_where_clause = str(WhereClause(sql_str))
         expected_where_clause = "where dummy = 'X'"
@@ -149,8 +113,10 @@ class StringTestCase(TestCase):
 
 
 class StringListTestCase(TestCase):
+    """ docstring tbd """
     def _test(self, sql_str, expected_select_clause, expected_from_clause,
               expected_where_clause):
+        """ docstring tbd """
         query = Query(sql_str)
 
         expected_query = Query(
@@ -164,6 +130,7 @@ class StringListTestCase(TestCase):
         self.assertEqual(query.where_clause, expected_where_clause)
 
     def test_query_basic(self):
+        """ docstring tbd """
         sql_str = "select * from dual where dummy = 'X'"
 
         expected_select_clause = SelectClause(['select', '*'])
@@ -174,9 +141,10 @@ class StringListTestCase(TestCase):
                    expected_where_clause)
 
     def test_query_single_field(self):
-        sql_str = "select field_1 from dual where dummy = 'X'"
+        """ docstring tbd """
+        sql_str = "select fld_1 from dual where dummy = 'X'"
 
-        expected_select_clause = SelectClause(['select', ['field_1']])
+        expected_select_clause = SelectClause(['select', ['fld_1']])
         expected_from_clause = FromClause(['from', 'dual', []])
         expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
 
@@ -184,9 +152,10 @@ class StringListTestCase(TestCase):
                    expected_where_clause)
 
     def test_query_multiple_fields(self):
-        sql_str = "select field_1, field_2 from dual where dummy = 'X'"
+        """ docstring tbd """
+        sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
 
-        expected_select_clause = SelectClause(['select', ['field_1', 'field_2']])
+        expected_select_clause = SelectClause(['select', ['fld_1', 'fld_2']])
         expected_from_clause = FromClause(['from', 'dual', []])
         expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
 
@@ -195,7 +164,9 @@ class StringListTestCase(TestCase):
 
 
 class ParseTestCase(TestCase):
+    """ docstring tbd """
     def test_parse_sql_clauses(self):
+        """ docstring tbd """
         sql_str = '''
             select a name,
                    b,
@@ -215,12 +186,13 @@ class ParseTestCase(TestCase):
 
         query = Query(sql_str)
         select_subquery = query.select_clause.fields[4].query
+        join_subquery = query.from_clause.joins[1].dataset
 
         self.assertEqual(type(select_subquery), Query)
-
-        # TODO Left off 2021-10-23: Need to parse subquery from join clause
+        self.assertEqual(type(join_subquery), Query)
 
     def test_case_statement_in_parentheses(self):
+        """ docstring tbd """
         sql_str = '''
             select id,
                    (case when gpa > 3.7 then 'Y' else null end) honors
@@ -239,37 +211,45 @@ class ParseTestCase(TestCase):
 
 
 class FunctionTestCase(TestCase):
+    """ docstring tbd """
     def test_parse_field_basic_no_alias(self):
+        """ docstring tbd """
         actual_field = SqlStr('a').parse_field()
         expected_field = Field('a', '')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_basic_with_alias(self):
+        """ docstring tbd """
         actual_field = SqlStr('b c').parse_field()
         expected_field = Field('b', 'c')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_function_no_alias(self):
+        """ docstring tbd """
         actual_field = SqlStr('fn(x, y)').parse_field()
         expected_field = Field('fn(x, y)', '')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_function_with_alias(self):
+        """ docstring tbd """
         actual_field = SqlStr('fn(x, y) z').parse_field()
         expected_field = Field('fn(x, y)', 'z')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_subquery_no_alias(self):
+        """ docstring tbd """
         actual_field = SqlStr('(select * from dual)').parse_field()
         expected_field = Field('(select * from dual)', '')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_subquery_with_alias(self):
+        """ docstring tbd """
         actual_field = SqlStr('(select * from dual) z').parse_field()
         expected_field = Field('(select * from dual)', 'z')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_fields_from_str(self):
+        """ docstring tbd """
         sql_str = SqlStr(
             'a, b c, fn(x, y), fn(x, y) z, (select * from dual), '
             '(select * from dual) z')
@@ -287,12 +267,15 @@ class FunctionTestCase(TestCase):
 
 
 class QueryTestCase(TestCase):
+    """ docstring tbd """
     def setUp(self):
+        """ docstring tbd """
         self.sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
                         'from c join d on e = f where g = h and i = j')
         self.query = Query(self.sql_str)
 
     def test_fields(self):
+        """ docstring tbd """
         expected_fields = [
             Field('a', 'name'),
             Field('b', ''),
@@ -309,6 +292,7 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_fields[3]), 'fn(id, height)')
 
     def test_select_clause(self):
+        """ docstring tbd """
         expected_select_clause_str = (
             'select a name, b, fn(id, dob) age, fn(id, height)')
         expected_select_clause = SelectClause(expected_select_clause_str)
@@ -318,6 +302,7 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_select_clause), expected_select_clause_str)
 
     def test_joins(self):
+        """ docstring tbd """
         expected_joins = [Join('join', Table(name='d'), OnClause('on e = f'))]
 
         actual_joins = self.query.from_clause.joins
@@ -327,6 +312,7 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_joins[0]), ' join d on e = f')
 
     def test_from_clause(self):
+        """ docstring tbd """
         expected_joins = [Join('join', Table(name='d'), OnClause('on e = f'))]
 
         expected_table = Table(name='c')
@@ -338,6 +324,7 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_from_clause), 'from c join d on e = f')
 
     def test_where_clause(self):
+        """ docstring tbd """
         expected_where_clause = WhereClause('where g = h and i = j')
         actual_where_clause = self.query.where_clause
 
@@ -346,6 +333,7 @@ class QueryTestCase(TestCase):
         self.assertEqual(str(actual_where_clause), 'where g = h and i = j')
 
     def test_query(self):
+        """ docstring tbd """
         expected_query = Query(self.sql_str)
         actual_query = self.query
 
@@ -355,9 +343,11 @@ class QueryTestCase(TestCase):
 
 
 class ComplexQueryTestCase(TestCase):
+    """ docstring tbd """
     maxDiff = None
 
     def setUp(self):
+        """ docstring tbd """
         self.sql_str = '''
             select a name,
                    b,
@@ -378,6 +368,7 @@ class ComplexQueryTestCase(TestCase):
         self.query = Query(self.sql_str)
 
     def test_query(self):
+        """ docstring tbd """
         expected_query = Query(self.sql_str)
         actual_query = self.query
 
@@ -392,7 +383,9 @@ class ComplexQueryTestCase(TestCase):
 
 
 class EquivalenceTestCase(TestCase):
+    """ docstring tbd """
     def setUp(self):
+        """ docstring tbd """
         self.query_1 = Query(
             'select a, b from c join d on e = f where g = h and i = j')
         self.query_2 = Query(
@@ -407,24 +400,28 @@ class EquivalenceTestCase(TestCase):
     # -------------------------------------------------------------------------
     # Test individual clauses
     def test_select_clause_equivalence_1(self):
+        """ docstring tbd """
         equivalent_1 = self.select_clause_1.is_equivalent_to(
             self.select_clause_2)
 
         self.assertTrue(equivalent_1)
 
     def test_select_clause_equivalence_2(self):
+        """ docstring tbd """
         equivalent_2 = self.select_clause_2.is_equivalent_to(
             self.select_clause_1)
 
         self.assertTrue(equivalent_2)
 
     def test_where_clause_equivalence_1(self):
+        """ docstring tbd """
         equivalent_1 = self.where_clause_1.is_equivalent_to(
             self.where_clause_2)
 
         self.assertTrue(equivalent_1)
 
     def test_where_clause_equivalence_2(self):
+        """ docstring tbd """
         equivalent_2 = self.where_clause_2.is_equivalent_to(
             self.where_clause_1)
 
@@ -433,18 +430,21 @@ class EquivalenceTestCase(TestCase):
     # -------------------------------------------------------------------------
     # Test clauses from a query
     def test_query_select_clause_equivalence_1(self):
+        """ docstring tbd """
         equivalent_1 = self.query_1.select_clause.is_equivalent_to(
             self.query_2.select_clause)
 
         self.assertTrue(equivalent_1)
 
     def test_query_select_clause_equivalence_2(self):
+        """ docstring tbd """
         equivalent_2 = self.query_2.select_clause.is_equivalent_to(
             self.query_1.select_clause)
 
         self.assertTrue(equivalent_2)
 
     def test_query_from_clause_equivalence_1(self):
+        """ docstring tbd """
         # equivalent_1 = self.query_1.from_clause.is_equivalent_to(
         #    self.query_2.from_clause)
         # TODO: Work on from-clause equivalence
@@ -452,6 +452,7 @@ class EquivalenceTestCase(TestCase):
         self.assertTrue(1 == 1)
 
     def test_query_from_clause_equivalence_2(self):
+        """ docstring tbd """
         self.query_2.from_clause.is_equivalent_to(self.query_1.from_clause)
 
         # TODO: Work on from-clause equivalence
@@ -460,10 +461,15 @@ class EquivalenceTestCase(TestCase):
 
 
 class ConversionTestCase(TestCase):
+    """ docstring tbd """
     def test_join_clause_to_scalar_subquery(self):
+        """ docstring tbd """
         input_sql_str = '''
             select id,
-                (select 'Y' from student_gpa where where student_id = student.id and gpa > 3.7) honors
+                   (select 'Y'
+                      from student_gpa
+                     where student_id = student.id
+                       and gpa > 3.7) honors
             from student;
         '''
 
@@ -478,3 +484,7 @@ class ConversionTestCase(TestCase):
 
         input_query = Query(input_sql_str)
         output_query = Query(output_sql_str)
+
+        # TODO: Eventually assertEqual
+        self.assertTrue(input_query)
+        self.assertTrue(output_query)

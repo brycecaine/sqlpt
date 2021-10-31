@@ -1,3 +1,5 @@
+""" docstring tbd """
+
 import re
 
 import sqlparse
@@ -6,8 +8,9 @@ from sqlparse.sql import Comparison as SQLParseComparison
 from sqlparse.sql import Function, Identifier, IdentifierList, Token
 
 
-# TODO: Accommodate list of strings (in addn to token_list) here and everywhere
+# TODO: Accommodate list of strings (in addition to token_list) everywhere
 def remove_whitespace(item_list, addl_chars=()):
+    """ docstring tbd """
     tokens = []
     chars_to_exclude = [' ', '\n']
     chars_to_exclude.extend(addl_chars)
@@ -22,6 +25,7 @@ def remove_whitespace(item_list, addl_chars=()):
 
 
 def tokenize(sql_str):
+    """ docstring tbd """
     sql = sqlparse.parse(sql_str)
     all_tokens = sql[0].tokens
     tokens = remove_whitespace(all_tokens)
@@ -30,6 +34,7 @@ def tokenize(sql_str):
 
 
 def remove_whitespace_from_str(string):
+    """ docstring tbd """
     string = ' '.join(string.split())
     string = ' '.join(string.split('\n'))
 
@@ -37,6 +42,7 @@ def remove_whitespace_from_str(string):
 
 
 def get_function_from_statement(statement):
+    """ docstring tbd """
     match = re.match(r'.+\(.*\)', statement)
 
     function_str = match.group() if match else ''
@@ -45,6 +51,7 @@ def get_function_from_statement(statement):
 
 
 def get_field_expression(field_str):
+    """ docstring tbd """
     field_expression = ''
 
     if field_str not in (',', ' ', '\n'):
@@ -61,6 +68,7 @@ def get_field_expression(field_str):
 
 
 def get_field_alias(field_str):
+    """ docstring tbd """
     field_alias = ''
 
     if field_str not in (',', ' ', '\n'):
@@ -85,6 +93,7 @@ def get_field_alias(field_str):
 
 
 def is_select(item):
+    """ docstring tbd """
     item_is_select = False
 
     if type(item) == Token and 'select' in str(item).lower():
@@ -94,6 +103,7 @@ def is_select(item):
 
 
 def get_field_strs(select_clause_str):
+    """ docstring tbd """
     field_strs = []
 
     sql_elements = sqlparse.parse(select_clause_str)
@@ -124,6 +134,7 @@ def get_field_strs(select_clause_str):
 
 
 def is_equivalent(object_list_1, object_list_2):
+    """ docstring tbd """
     # Check if all of list 1 is equivalent with members of list 2
     list_1_equivalence = {}
 
@@ -156,6 +167,7 @@ def is_equivalent(object_list_1, object_list_2):
 
 
 def is_join(item):
+    """ docstring tbd """
     item_is_join = False
 
     if type(item) == Token and 'join' in str(item).lower():
@@ -165,6 +177,7 @@ def is_join(item):
 
 
 def is_conjunction(item):
+    """ docstring tbd """
     item_is_conjunction = False
 
     item_str = str(item).lower()
@@ -176,6 +189,7 @@ def is_conjunction(item):
 
 
 def is_sqlparse_comparison(item):
+    """ docstring tbd """
     item_is_comparison = False
 
     if type(item) == SQLParseComparison:
@@ -185,6 +199,7 @@ def is_sqlparse_comparison(item):
 
 
 def get_join_kind(item):
+    """ docstring tbd """
     join_kind = 'join'
 
     if type(item) == Token and 'left' in str(item).lower():
@@ -194,6 +209,7 @@ def get_join_kind(item):
 
 
 def get_truth_table_result(expr):
+    """ docstring tbd """
     expr_w_parens = re.sub(r'(\w+\s*=\s*\w+)', r'(\1)', expr)
     inputs = [i.replace(' ', '') for i in re.split(r'=|and|or|not', expr)]
     truth_table = ttg.Truths(inputs, [expr_w_parens])

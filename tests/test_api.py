@@ -93,8 +93,8 @@ class TestApi(unittest.TestCase):
 
         sql_tokens = tokenize(sql)
 
-        # print(dir(sql_tokens[-1]))
-        # print(sql_tokens[-1].tokens)
+        # dir(sql_tokens[-1])
+        # sql_tokens[-1].tokens
 
 
 class TestQuery(unittest.TestCase):
@@ -182,10 +182,10 @@ class TestQuery(unittest.TestCase):
 
         query = Query(sql)
 
-        print(query)
+        self.assertTrue(query)
 
-        # print(dir(sql_tokens[-1]))
-        # print(sql_tokens[-1].tokens)
+        # dir(sql_tokens[-1])
+        # sql_tokens[-1].tokens
 
     def test_fuse(self):
         sql_1 = ("select id, "
