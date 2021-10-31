@@ -260,6 +260,10 @@ class ExpressionClause:
 
         return string
 
+    def parse_expression_clause(self):
+        """ docstring tbd """
+        raise NotImplementedError
+
     def is_equivalent_to(self, other):
         """ docstring tbd """
         equivalent = (get_truth_table_result(self.expression) ==
