@@ -229,7 +229,6 @@ class ExpressionClause:
             expression = ''
 
             for sql_token in expression_clause_token_list:
-                # TODO Trim in beforehand to not need parsing anywhere else
                 trimmed_sql_token = ' '.join(str(sql_token).split())
                 expression += f'{trimmed_sql_token} '
 
