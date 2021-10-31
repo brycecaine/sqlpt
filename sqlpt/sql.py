@@ -406,7 +406,6 @@ def parse_from_clause(sql_str):
 @dataclass
 class FromClause:
     """ docstring tbd """
-    # TODO: Add another attribute for sql_str (orig?)
     from_dataset: DataSet
     joins: list
 
@@ -644,6 +643,7 @@ class WhereClause(ExpressionClause):
 @dataclass
 class Query(DataSet):
     """ docstring tbd """
+    sql_str: SqlStr
     select_clause: SelectClause
     from_clause: FromClause
     where_clause: WhereClause
@@ -652,32 +652,31 @@ class Query(DataSet):
         # TODO: What if a sole select clause object is passed in?
         if len(args) == 1:
             if type(args[0]) == str:
-                sql_str = args[0]
-
-                # TODO Make sure to get the correct where clause when parsing
-                #      sql with more than one
-                # TODO Figure out why leaving self.expression as '' results in:
-                #      SyntaxWarning: null string passed to Literal; use
-                #      Empty() instead
-                select_clause = SelectClause(sql_str)
-                from_clause = FromClause(sql_str)
-                where_clause = WhereClause(sql_str)
+                # TODO: Disinguish between s_str and sql_str everywhere
+                s_str = args[0]
+                select_clause = SelectClause(s_str)
+                from_clause = FromClause(s_str)
+                where_clause = WhereClause(s_str)
 
             elif type(args[0]) == list:
+                s_str = ''
                 select_clause = args[0][0]
                 from_clause = args[0][1]
                 where_clause = args[0][2]
 
         elif len(args) == 2:
+            s_str = ''
             select_clause = args[0]
             from_clause = args[1]
             where_clause = None
 
         elif len(args) == 3:
+            s_str = ''
             select_clause = args[0]
             from_clause = args[1]
             where_clause = args[2]
 
+        self.sql_str = SqlStr(s_str)
         self.select_clause = select_clause
         self.from_clause = from_clause
         self.where_clause = where_clause
