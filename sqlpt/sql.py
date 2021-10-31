@@ -356,6 +356,28 @@ class Join:
         return equivalent
 
 
+def parse_from_clause(sql_str):
+    sql_tokens = (
+        remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+
+    from_clause_token_list = []
+
+    start_appending = False
+
+    for sql_token in sql_tokens:
+        if type(sql_token) == Token:
+            if sql_token.value.lower() == 'from':
+                start_appending = True
+
+        elif type(sql_token) == Where:
+            break
+
+        if start_appending:
+            from_clause_token_list.append(sql_token)
+
+    return from_clause_token_list
+
+
 @dataclass
 class FromClause:
     """ docstring tbd """
@@ -369,24 +391,7 @@ class FromClause:
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
-
-                sql_tokens = (
-                    remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
-
-                from_clause_token_list = []
-
-                start_appending = False
-
-                for sql_token in sql_tokens:
-                    if type(sql_token) == Token:
-                        if sql_token.value.lower() == 'from':
-                            start_appending = True
-
-                    elif type(sql_token) == Where:
-                        break
-
-                    if start_appending:
-                        from_clause_token_list.append(sql_token)
+                from_clause_token_list = parse_from_clause(sql_str)
 
             elif type(args[0]) == list:
                 from_clause_token_list = args[0]
@@ -631,7 +636,7 @@ class Query(DataSet):
                 #      Empty() instead
                 # TODO Make this into a function and find a better place or it
                 select_clause = SelectClause(sql_str)
-                from_clause = FromClause(clauses_tuple[1])
+                from_clause = FromClause(sql_str)
                 where_clause = WhereClause(clauses_tuple[2])
 
             elif type(args[0]) == list:
