@@ -200,10 +200,10 @@ def is_sqlparse_comparison(item):
 
 def get_join_kind(item):
     """ docstring tbd """
-    join_kind = 'join'
+    join_kind = 'inner'
 
     if type(item) == Token and 'left' in str(item).lower():
-        join_kind = 'left join'
+        join_kind = 'left'
 
     return join_kind
 

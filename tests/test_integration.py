@@ -64,3 +64,32 @@ class DatabaseTestCase(TestCase):
         }
 
         self.assertEqual(actual_counts, expected_counts)
+
+
+class SqlShapingTestCase(TestCase):
+    def test_left_join_to_select_scalar_subquery(self):
+        """ docstring tbd """
+        sql_str_original = '''
+            select subject,
+                   course_number,
+                   name
+              from section
+              left
+              join term
+                on section.term_id = term.id
+        '''
+
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        query = Query(sql_str_original)
+
+        actual_scalarized_query = query.scalarize()
+
+        expected_scalarized_query = Query(sql_str_scalarized)
+
+        self.assertEqual(actual_scalarized_query, expected_scalarized_query)

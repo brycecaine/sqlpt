@@ -333,7 +333,7 @@ class QueryTestCase(TestCase):
 
     def test_joins(self):
         """ docstring tbd """
-        expected_joins = [Join('join', Table(name='d'), OnClause('on e = f'))]
+        expected_joins = [Join('inner', Table(name='d'), OnClause('on e = f'))]
 
         actual_joins = self.query.from_clause.joins
 
@@ -343,7 +343,7 @@ class QueryTestCase(TestCase):
 
     def test_from_clause(self):
         """ docstring tbd """
-        expected_joins = [Join('join', Table(name='d'), OnClause('on e = f'))]
+        expected_joins = [Join('inner', Table(name='d'), OnClause('on e = f'))]
 
         expected_table = Table(name='c')
         expected_from_clause = FromClause(expected_table, expected_joins)

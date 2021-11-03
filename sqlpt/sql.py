@@ -5,8 +5,10 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 import pandas as pd
+# from sqlalchemy.sql import expression
 import sqlparse
 from sqlalchemy import create_engine
+from sqlalchemy import inspect
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
 from sqlpt.service import (get_field_alias, get_field_expression,
@@ -86,6 +88,14 @@ class Table(DataSet):
 
         return row_count
 
+    def get_columns(self):
+        """ docstring tbd """
+        engine = create_engine('sqlite:///sqlpt/college.db')
+        insp = inspect(engine)
+        columns = insp.get_columns(self.name)
+
+        return columns
+
     def is_equivalent_to(self, other):
         """ docstring tbd """
         equivalent = False
@@ -134,12 +144,7 @@ def parse_fields_from_token_list(field_token_list):
         expression = match_obj.group('expression')
         alias = match_obj.group('alias')
 
-        if expression.startswith('(select'):
-            query = Query(expression[1:-1])
-        else:
-            query = None
-
-        field = Field(expression, alias, query)
+        field = Field(expression, alias)
         fields.append(field)
 
     return fields
@@ -179,7 +184,6 @@ class SelectClause:
                 fields = convert_token_list_to_fields(token_list)
 
             elif type(args[0]) == list:
-
                 if args[0]:
                     if type(args[0][0]) == Token:
                         token_list = args[0]
@@ -218,10 +222,28 @@ class SelectClause:
 
         return field_strs
 
+    def _get_field(self, *args):
+        """ docstring tbd """
+        if type(args[0]) == str:
+            field = Field(args[0])
+        elif type(args[0]) == Field:
+            field = args[0]
+        else:
+            field = Field(*args)
+
+        return field
+
     def add_field(self, *args):
         """ docstring tbd """
-        field = Field(*args)
+        field = self._get_field(*args)
+
         self.fields.append(field)
+
+    def remove_field(self, *args):
+        """ docstring tbd """
+        field = self._get_field(*args)
+
+        self.fields.remove(field)
 
     def is_equivalent_to(self, other):
         """ docstring tbd """
@@ -236,6 +258,24 @@ class SelectClause:
         """ docstring tbd """
 
 
+def get_expression_clause_parts(token_list):
+    expression = ''
+
+    for sql_token in token_list:
+        trimmed_sql_token = ' '.join(str(sql_token).split())
+        expression += f'{trimmed_sql_token} '
+
+    expression = expression[:-1]
+
+    full_expression_words = expression.split(' ')
+
+    leading_word = full_expression_words.pop(0)
+    expression = ' '.join(full_expression_words)
+
+    return leading_word, expression
+
+
+# TODO: Make Expression class and make expression an instance of it?
 @dataclass
 class ExpressionClause:
     """ docstring tbd """
@@ -249,21 +289,14 @@ class ExpressionClause:
                 expression_clause_token_list = (
                     self.parse_expression_clause(sql_str))
 
+                leading_word, expression = get_expression_clause_parts(
+                    expression_clause_token_list)
+
             elif type(args[0]) == list:
                 expression_clause_token_list = args[0]
 
-            expression = ''
-
-            for sql_token in expression_clause_token_list:
-                trimmed_sql_token = ' '.join(str(sql_token).split())
-                expression += f'{trimmed_sql_token} '
-
-            expression = expression[:-1]
-
-            full_expression_words = expression.split(' ')
-
-            leading_word = full_expression_words.pop(0)
-            expression = ' '.join(full_expression_words)
+                leading_word, expression = get_expression_clause_parts(
+                    expression_clause_token_list)
 
         elif len(args) == 2:
             leading_word = args[0]
@@ -276,10 +309,10 @@ class ExpressionClause:
         return hash(str(self))
 
     def __bool__(self):
-        if not self.leading_word and not self.expression:
-            return False
+        if self.expression:
+            return True
 
-        return True
+        return False
 
     def __str__(self):
         string = f'{self.leading_word} {self.expression}' if self else ''
@@ -379,9 +412,16 @@ class Join:
         else:
             dataset_str = self.dataset
 
-        join_str = f' {self.kind} {dataset_str} {self.on_clause}'
+        join_str = f' {self.kind_str} {dataset_str} {self.on_clause}'
 
         return join_str
+
+    @property
+    def kind_str(self):
+        """ docstring tbd """
+        join_prefix = 'join' if self.kind == 'inner' else f'{self.kind} join'
+
+        return join_prefix
 
     def is_equivalent_to(self, other):
         """ docstring tbd """
@@ -430,11 +470,18 @@ class FromClause:
                 sql_str = args[0]
                 from_clause_token_list = parse_from_clause(sql_str)
 
+                from_dataset, joins = self._parse_from_clause(
+                    from_clause_token_list)
+
             elif type(args[0]) == list:
                 from_clause_token_list = args[0]
 
-            from_dataset, joins = self._parse_from_clause(
-                from_clause_token_list)
+                from_dataset, joins = self._parse_from_clause(
+                    from_clause_token_list)
+
+            elif isinstance(args[0], DataSet):
+                from_dataset = args[0]
+                joins = []
 
         elif len(args) == 2:
             from_dataset = args[0]
@@ -563,6 +610,10 @@ class FromClause:
 
         return first_join_dataset
 
+    def remove_join(self, join):
+        """ docstring tbd """
+        self.joins.remove(join)
+
 
 # TODO Remove this maybe? No longer needed?
 @dataclass
@@ -668,11 +719,13 @@ class Query(DataSet):
                 # TODO: Distinguish between s_str and sql_str everywhere
                 s_str = args[0]
                 select_clause = SelectClause(s_str)
+                # TODO: Accommodate for missing from_clause
                 from_clause = FromClause(s_str)
-                where_clause = WhereClause(s_str)
+                where_clause = WhereClause(s_str) or None
 
             elif type(args[0]) == list:
                 s_str = ''
+                # TODO: Accommodate for missing from_clause and where_clause
                 select_clause = args[0][0]
                 from_clause = args[0][1]
                 where_clause = args[0][2]
@@ -796,6 +849,44 @@ class Query(DataSet):
 
         return counts_dict
 
+    def scalarize(self):
+        joins_to_remove = []
+
+        for join in self.from_clause.joins:
+            if join.kind == 'left':
+                dataset_columns = join.dataset.get_columns()
+                column_names = [
+                    col_dict['name'] for col_dict in dataset_columns]
+
+                for field in self.select_clause.fields:
+                    if field.expression in column_names:
+                        self.select_clause.remove_field(field)
+
+                        subquery_select_clause = SelectClause([field])
+                        subquery_from_clause = FromClause(join.dataset)
+                        # TODO: Remove 'where' when able to construct
+                        #       WhereClause with an Expression Class (tbd)
+                        #       instance
+                        subquery_where_clause = WhereClause('where', join.on_clause.expression)
+                        subquery = Query(
+                            subquery_select_clause, subquery_from_clause,
+                            subquery_where_clause)
+
+                        alias = field.alias or field.expression
+                        subquery_field = Field(subquery, alias)
+                        # TODO: Substitute this with add_subquery_field?
+                        self.select_clause.add_field(subquery_field)
+
+                        joins_to_remove.append(join)
+        
+        for join_to_remove in joins_to_remove:
+            self.from_clause.remove_join(join_to_remove)
+
+        scalarized_query = Query(
+            self.select_clause, self.from_clause, self.where_clause)
+
+        return scalarized_query
+
     def fuse(self, query):
         """ docstring tbd """
         # FUTURE: Figure out how to fuse from clauses
@@ -870,6 +961,14 @@ class Query(DataSet):
         self.where_clause.add_comparison(comparison)
 
 
+# TODO: Replace sql_str with s_str where it makes sense
+def get_query_from_subquery_str(s_str):
+    """ docstring tbd """
+    query = Query(s_str[1:-1]) if s_str[:7] == '(select' else None
+
+    return query
+
+
 @dataclass
 class Field:
     """ docstring tbd """
@@ -881,24 +980,28 @@ class Field:
         if len(args) == 1:
             if type(args[0]) == str:
                 field_str = args[0]
+                # TODO: Make sure this accommodates subqueries as expressions
                 expression = get_field_expression(field_str)
                 alias = get_field_alias(field_str)
                 query = Query(expression)
 
             elif type(args[0]) == list:
+                # TODO: What is the use case here again?
                 expression = args[0][0]
                 alias = args[0][1]
                 query = Query(expression)
 
         elif len(args) == 2:
-            expression = args[0]
-            alias = args[1]
-            query = None
+            if type(args[0]) == Query:
+                expression = f'({str(args[0])})'
+                alias = args[1]
+                query = args[0]
 
-        elif len(args) == 3:
-            expression = args[0]
-            alias = args[1]
-            query = args[2]
+            else:
+                expression = args[0]
+                alias = args[1]
+                # query = Query(args[0][1:-1]) if args[0][:7] == '(select' else None
+                query = get_query_from_subquery_str(args[0])
 
         self.expression = expression
         self.alias = alias
