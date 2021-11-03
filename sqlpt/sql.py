@@ -74,6 +74,18 @@ class Table(DataSet):
     def __str__(self):
         return self.name
 
+    def count(self):
+        """ docstring tbd """
+        select_clause = 'select count(*) cnt'
+        from_clause = f'from {self.name}'
+
+        count_query = Query(select_clause, from_clause)
+
+        rows = count_query.run()
+        row_count = rows[0]['cnt']
+
+        return row_count
+
     def is_equivalent_to(self, other):
         """ docstring tbd """
         equivalent = False
@@ -274,7 +286,7 @@ class ExpressionClause:
 
         return string
 
-    def parse_expression_clause(self):
+    def parse_expression_clause(self, sql_str):
         """ docstring tbd """
         raise NotImplementedError
 
@@ -304,6 +316,7 @@ class ExpressionClause:
 
 
 def parse_on_clause(sql_str):
+    """ docstring tbd """
     sql_tokens = (
         remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
 
@@ -382,6 +395,7 @@ class Join:
 
 
 def parse_from_clause(sql_str):
+    """ docstring tbd """
     sql_tokens = (
         remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
 
@@ -609,6 +623,7 @@ class Comparison:
 
 
 def parse_where_clause(sql_str):
+    """ docstring tbd """
     sql_tokens = (
         remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
 
@@ -650,7 +665,7 @@ class Query(DataSet):
     def __init__(self, *args):
         if len(args) == 1:
             if type(args[0]) == str:
-                # TODO: Disinguish between s_str and sql_str everywhere
+                # TODO: Distinguish between s_str and sql_str everywhere
                 s_str = args[0]
                 select_clause = SelectClause(s_str)
                 from_clause = FromClause(s_str)
@@ -732,9 +747,9 @@ class Query(DataSet):
     @property
     def db_conn(self):
         """ docstring tbd """
-        self.db_conn = create_engine('sqlite:///sqlpt/college.db')
+        db_conn = create_engine('sqlite:///sqlpt/college.db')
 
-        return self.db_conn
+        return db_conn
 
     @property
     def dataframe(self):
@@ -742,6 +757,44 @@ class Query(DataSet):
         data_frame = pd.read_sql_query(self.__str__(), self.db_conn)
 
         return data_frame
+
+    def run(self):
+        """ docstring tbd """
+        with self.db_conn.connect() as db_conn:
+            rows = db_conn.execute(str(self))
+
+            row_dicts = []
+
+            for row in rows:
+                row_dict = dict(row._mapping.items())
+                row_dicts.append(row_dict)
+
+        return row_dicts
+
+    def count(self):
+        """ docstring tbd """
+        select_clause = 'select count(*) cnt'
+
+        count_query = Query(select_clause, self.from_clause, self.where_clause)
+
+        rows = count_query.run()
+        row_count = rows[0]['cnt']
+
+        return row_count
+
+    def counts(self):
+        """ docstring tbd """
+        counts_dict = {}
+        query_count = self.count()
+        counts_dict['query'] = query_count
+
+        from_dataset = self.from_clause.from_dataset
+        counts_dict[from_dataset.name] = from_dataset.count()
+
+        for join in self.from_clause.joins:
+            counts_dict[join.dataset.name] = join.dataset.count()
+
+        return counts_dict
 
     def fuse(self, query):
         """ docstring tbd """
