@@ -786,6 +786,20 @@ class WhereClause(ExpressionClause):
         return token_list
 
 
+def delete_node(query, coordinates_list):
+    """ docstring tbd """
+    node = query
+
+    for coordinates in coordinates_list:
+        for coordinate in coordinates:
+            if type(coordinate) == str:
+                node = getattr(node, coordinate)
+            else:
+                node.pop(coordinate)
+
+    return query
+
+
 @dataclass
 class Query(DataSet):
     """ docstring tbd """
@@ -798,6 +812,7 @@ class Query(DataSet):
         if len(args) == 1:
             if type(args[0]) == str:
                 # TODO: Distinguish between s_str and sql_str everywhere
+                #       s_str being a snippet? and sql_str a full query sql
                 s_str = args[0]
                 select_clause = SelectClause(s_str)
                 # TODO: Accommodate for missing from_clause
@@ -892,10 +907,49 @@ class Query(DataSet):
 
         return data_frame
 
+    def locate_column(self, s_str):
+        locations = []
+
+        for i, field in enumerate(self.select_clause.fields):
+            if s_str in field.expression:
+                locations.append(('select_clause', 'fields', i))
+
+            # TODO: Improve this check; should a field always have a query attribute even if None?
+            if hasattr(field, 'query'):
+                if type(field.query) == Query:
+                    locations.extend(field.query.locate_column(s_str))
+
+        for i, join in enumerate(self.from_clause.joins):
+            for j, comparison in enumerate(join.on_clause.expression.comparisons):
+                if s_str in comparison:
+                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j))
+
+        for i, comparison in enumerate(self.where_clause.expression.comparisons):
+            if s_str in comparison.left_term or s_str in comparison.right_term:
+                locations.append(('where_clause', 'expression', 'comparisons', i))
+
+        return locations
+
+    def delete_node(self, coordinates_list):
+        deleted_node = delete_node(self, coordinates_list)
+
+        return deleted_node
+
     def run(self):
         """ docstring tbd """
+        rows = []
+
         with self.db_conn.connect() as db_conn:
-            rows = db_conn.execute(str(self))
+            try:
+                rows = db_conn.execute(str(self))
+            except exc.OperationalError as e:
+                if 'no such column' in str(e):
+                    error_msg = str(e).split('\n')[0]
+                    column_name = error_msg.split(': ')[1]
+                    coordinates_list = self.locate_column(column_name)
+
+                    remaining_query = delete_node(self, coordinates_list)
+                    rows = db_conn.execute(str(remaining_query))
 
             row_dicts = []
 
@@ -907,12 +961,16 @@ class Query(DataSet):
 
     def count(self):
         """ docstring tbd """
-        select_clause = 'select count(*) cnt'
+        row_count = None
+
+        select_clause = SelectClause('select count(*) cnt')
 
         count_query = Query(select_clause, self.from_clause, self.where_clause)
 
         rows = count_query.run()
-        row_count = rows[0]['cnt']
+
+        if rows:
+            row_count = rows[0]['cnt']
 
         return row_count
 
@@ -931,6 +989,7 @@ class Query(DataSet):
         return counts_dict
 
     def scalarize(self):
+        """ docstring tbd """
         joins_to_remove = []
 
         for join in self.from_clause.joins:

@@ -67,6 +67,7 @@ class DatabaseTestCase(TestCase):
 
 
 class SqlShapingTestCase(TestCase):
+    """ docstring tbd """
     def test_left_join_to_select_scalar_subquery(self):
         """ docstring tbd """
         sql_str_original = '''
@@ -93,3 +94,17 @@ class SqlShapingTestCase(TestCase):
         expected_scalarized_query = Query(sql_str_scalarized)
 
         self.assertEqual(actual_scalarized_query, expected_scalarized_query)
+
+    def test_ignore_dangling_parameters(self):
+        """ docstring tbd """
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        query = Query(sql_str_scalarized)
+
+        self.assertEqual(
+            query.select_clause.fields[2].query.count(), 2)
