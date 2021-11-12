@@ -1,14 +1,14 @@
 """ docstring tbd """
 
+import enum
 import re
 from copy import deepcopy
 from dataclasses import dataclass
 
 import pandas as pd
-# from sqlalchemy.sql import expression
 import sqlparse
-from sqlalchemy import create_engine
-from sqlalchemy import inspect
+from sqlalchemy import create_engine, exc, inspect
+from sqlparse.sql import Comparison as SqlParseComparison
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
 from sqlpt.service import (get_field_alias, get_field_expression,
@@ -270,17 +270,58 @@ def get_expression_clause_parts(token_list):
     full_expression_words = expression.split(' ')
 
     leading_word = full_expression_words.pop(0)
-    expression = ' '.join(full_expression_words)
+    expression = Expression(' '.join(full_expression_words))
 
     return leading_word, expression
 
 
-# TODO: Make Expression class and make expression an instance of it?
+@dataclass
+class Expression:
+    comparisons: list
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            if type(args[0]) == str:
+                comparisons = []
+
+                if args[0]:
+                    statement = sqlparse.parse(args[0])
+
+                    expression_tokens = (remove_whitespace(statement[0].tokens))
+                    comparison_token_list = []
+                    comparison_token_lists = []
+
+                    for token in expression_tokens:
+                        if type(token) != SqlParseComparison:
+                            comparison_token_list.append(token)
+
+                        elif type(token) == SqlParseComparison:
+                            comparison_token_list.append(token)
+                            comparison_token_lists.append(comparison_token_list)  # deepcopy?
+                            comparison_token_list = []
+
+                    for comparison_token_list in comparison_token_lists:
+                        comparison = Comparison(comparison_token_list)
+                        comparisons.append(comparison)
+
+        self.comparisons = comparisons
+
+    def __str__(self):
+        string = ''
+
+        for comparison in self.comparisons:
+            string += f'{str(comparison)} '
+
+        string = string[:-1]
+
+        return string
+
+
 @dataclass
 class ExpressionClause:
     """ docstring tbd """
     leading_word: str
-    expression: str
+    expression: Expression
 
     def __init__(self, *args):
         if len(args) == 1:
@@ -309,7 +350,7 @@ class ExpressionClause:
         return hash(str(self))
 
     def __bool__(self):
-        if self.expression:
+        if self.expression.comparisons:
             return True
 
         return False
@@ -325,8 +366,8 @@ class ExpressionClause:
 
     def is_equivalent_to(self, other):
         """ docstring tbd """
-        equivalent = (get_truth_table_result(self.expression) ==
-                      get_truth_table_result(other.expression))
+        equivalent = (get_truth_table_result(str(self.expression)) ==
+                      get_truth_table_result(str(other.expression)))
 
         return equivalent
 
@@ -615,10 +656,11 @@ class FromClause:
         self.joins.remove(join)
 
 
-# TODO Remove this maybe? No longer needed?
 @dataclass
 class Comparison:
     """ docstring tbd """
+    bool_operator: str
+    bool_sign: str
     left_term: str
     operator: str
     right_term: str
@@ -629,29 +671,68 @@ class Comparison:
                 comparison_str = args[0]
                 statement = sqlparse.parse(comparison_str)
                 sqlparse_comparison = statement[0].tokens[0]
-                # TODO Remove whitespace in before this point
                 comparison_tokens = (
                     remove_whitespace(sqlparse_comparison.tokens))
 
+                elements = [comparison_token.value
+                            for comparison_token in comparison_tokens]
+
             elif type(args[0]) == list:
                 # TODO Untested
-                comparison_tokens = args[0]
+                sqlparse_comparison = args[0][0]
 
-            elements = [comparison_token.value
-                        for comparison_token in comparison_tokens]
+                elements = []
 
-        elif len(args) == 3:
-            elements = args
+                for sqlparse_comparison in args[0]:
+                    if type(sqlparse_comparison) != SqlParseComparison:
+                        elements.append(sqlparse_comparison.value)
 
-        self.left_term = elements[0]
-        self.operator = elements[1]
-        self.right_term = elements[2]
+                    elif type(sqlparse_comparison) == SqlParseComparison:
+                        comparison_tokens = (
+                            remove_whitespace(sqlparse_comparison.tokens))
+                        
+                        els = [comparison_token.value
+                               for comparison_token in comparison_tokens]
+
+                        elements.extend(els)
+
+            if elements[0] in ('and', 'or'):
+                bool_operator = elements.pop(0)
+            elif elements[0] in ('not'):
+                bool_sign = elements.pop(0)
+            else:
+                bool_operator = ''
+
+            if elements[0] == 'not':
+                bool_sign = elements.pop(0)
+            else:
+                bool_sign = ''
+
+            left_term = elements[0]
+            operator = elements[1]
+            right_term = elements[2]
+
+        self.bool_operator = bool_operator
+        self.bool_sign = bool_sign
+        self.left_term = left_term
+        self.operator = operator
+        self.right_term = right_term
 
     def __hash__(self):
         return hash(str(self))
 
     def __str__(self):
-        string = f'{self.left_term} {self.operator} {self.right_term}'
+        string = ''
+
+        if self.bool_operator:
+            string += f'{self.bool_operator} '
+
+        if self.bool_sign:
+            string += f'{self.bool_sign} '
+
+        string += f'{self.left_term} '
+        string += f'{self.operator} '
+        string += f'{self.right_term}'
 
         return string
 
