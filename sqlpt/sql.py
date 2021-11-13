@@ -1027,6 +1027,30 @@ class Query(DataSet):
 
         return scalarized_query
 
+    def is_leaf(self):
+        """ docstring tbd """
+        contains_subqueries = False
+
+        for field in self.select_clause.fields:
+            if field.query:
+                contains_subqueries = True
+                break
+
+        if not contains_subqueries:
+            if type(self.from_clause.from_dataset) == Query:
+                contains_subqueries = True
+
+        if not contains_subqueries:
+            # TODO: Check if a subquery lives in the join's on_clause
+            for join in self.from_clause.joins:
+                if type(join.dataset) == Query:
+                    contains_subqueries = True
+                    break
+
+        # TODO: Check if a subquery lives in the where_clause
+
+        return not contains_subqueries
+
     def fuse(self, query):
         """ docstring tbd """
         # FUTURE: Figure out how to fuse from clauses

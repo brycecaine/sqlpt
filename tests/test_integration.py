@@ -108,3 +108,17 @@ class SqlShapingTestCase(TestCase):
 
         self.assertEqual(
             query.select_clause.fields[2].query.count(), 2)
+
+    def test_query_is_leaf(self):
+        """ docstring tbd """
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        query = Query(sql_str_scalarized)
+
+        self.assertFalse(query.is_leaf())
+        self.assertTrue(query.select_clause.fields[2].query.is_leaf())
