@@ -46,6 +46,12 @@ class SqlStr(str):
         return field
 
 
+class QueryResult(list):
+    """ docstring tbd """
+    def count(self):
+        return len(self)
+
+
 def get_dataset(token):
     """ docstring tbd """
     dataset = None
@@ -78,13 +84,8 @@ class Table(DataSet):
 
     def count(self):
         """ docstring tbd """
-        select_clause = 'select count(*) cnt'
-        from_clause = f'from {self.name}'
-
-        count_query = Query(select_clause, from_clause)
-
-        rows = count_query.run()
-        row_count = rows[0]['cnt']
+        query = Query(f'select rowid from {self.name}')
+        row_count = query.run().count()
 
         return row_count
 
@@ -794,8 +795,40 @@ def delete_node(query, coordinates):
         for component in coordinate:
             if type(component) == str:
                 node = getattr(node, component)
+
             else:
+                # Delete the nth node, not just the part of the node, which
+                # would break the query (hence the `break`)
                 node.pop(component)
+                break
+
+    return query
+
+
+def parameterize_node(query, coordinates):
+    """ docstring tbd """
+    node = query
+    leaf_node = None
+
+    for coordinate in coordinates:
+        for component in coordinate:
+            if type(component) == str:
+                node = getattr(node, component)
+
+            else:
+                node = node[component]
+                leaf_node = node
+
+    # Assuming (I know...) that leaf_node is an instance of Comparison
+    # To parameterize a comparison, use a standard approach where the bind
+    # parameter is the right_term, so if the invalid column is the left_term,
+    # swap them first and then give the right_term a standard bind-parameter
+    # name of :[left_term] (replacing . with _)
+    if leaf_node:
+        if component == 'left_term':
+            leaf_node.left_term = leaf_node.right_term
+
+        leaf_node.right_term = f":{leaf_node.left_term.replace('.', '_')}"
 
     return query
 
@@ -908,25 +941,34 @@ class Query(DataSet):
         return data_frame
 
     def locate_column(self, s_str):
+        """ docstring tbd """
         locations = []
 
+        # TODO: Move this to be a method of the SelectClause?
         for i, field in enumerate(self.select_clause.fields):
             if s_str in field.expression:
                 locations.append(('select_clause', 'fields', i))
 
-            # TODO: Improve this check; should a field always have a query attribute even if None?
+            # TODO: Improve this check; should a field always have a query attribute even if None? Now, I'm leaning toward no
             if hasattr(field, 'query'):
                 if type(field.query) == Query:
                     locations.extend(field.query.locate_column(s_str))
 
+        # TODO: Move this to be a method of the FromClause?
         for i, join in enumerate(self.from_clause.joins):
+            # TODO: Move this to be a method of the OnClause? (ExpressionClause)
             for j, comparison in enumerate(join.on_clause.expression.comparisons):
-                if s_str in comparison:
-                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j))
+                if s_str in comparison.left_term:
+                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j, 'left_term'))
+                elif s_str in comparison.right_term:
+                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j, 'right_term'))
 
+        # TODO: Move this to be a method of the WhereClause? (ExpressionClause)
         for i, comparison in enumerate(self.where_clause.expression.comparisons):
-            if s_str in comparison.left_term or s_str in comparison.right_term:
-                locations.append(('where_clause', 'expression', 'comparisons', i))
+            if s_str in comparison.left_term:
+                locations.append(('where_clause', 'expression', 'comparisons', i, 'left_term'))
+            elif s_str in comparison.right_term:
+                locations.append(('where_clause', 'expression', 'comparisons', i, 'right_term'))
 
         return locations
 
@@ -936,9 +978,9 @@ class Query(DataSet):
 
         return remaining_query
 
-    def crop(self):
+    def locate_invalid_columns(self):
         """ docstring tbd """
-        remaining_query = self
+        invalid_column_coordinates = []
 
         with self.db_conn.connect() as db_conn:
             try:
@@ -950,18 +992,40 @@ class Query(DataSet):
                     invalid_column_name = error_msg.split(': ')[1]
                     invalid_column_coordinates = self.locate_column(
                         invalid_column_name)
-                    remaining_query = self.delete_node(
-                        invalid_column_coordinates)
 
-        return remaining_query
+        return invalid_column_coordinates
 
-    def run(self):
+    def crop(self):
+        """ docstring tbd """
+        invalid_column_coordinates = self.locate_invalid_columns()
+        cropped_query = self.delete_node(invalid_column_coordinates)
+
+        return cropped_query
+
+    def parameterize_node(self, coordinates):
+        """ docstring tbd """
+        parameterized_query = parameterize_node(self, coordinates)
+
+        return parameterized_query
+
+    # TODO: Not related to this location of code, but: change
+    #       Comparison.bool_operator to Comparison.bool_conjunction
+    def parameterize(self):
+        """ docstring tbd """
+        # self.where_clause.parameterize(parameter_fields)
+        invalid_column_coordinates = self.locate_invalid_columns()
+        parameterized_query = self.parameterize_node(
+            invalid_column_coordinates)
+
+        return parameterized_query
+
+    def run(self, **kwargs):
         """ docstring tbd """
         rows = []
 
         with self.db_conn.connect() as db_conn:
-            rows = db_conn.execute(str(self))
-            row_dicts = []
+            rows = db_conn.execute(str(self), **kwargs)
+            row_dicts = QueryResult()
 
             for row in rows:
                 row_dict = dict(row._mapping.items())
@@ -969,32 +1033,17 @@ class Query(DataSet):
 
         return row_dicts
 
-    def count(self):
-        """ docstring tbd """
-        row_count = None
-
-        select_clause = SelectClause('select count(*) cnt')
-
-        count_query = Query(select_clause, self.from_clause, self.where_clause)
-
-        rows = count_query.run()
-
-        if rows:
-            row_count = rows[0]['cnt']
-
-        return row_count
-
     def counts(self):
         """ docstring tbd """
         counts_dict = {}
-        query_count = self.count()
+        query_count = self.run().count()
         counts_dict['query'] = query_count
 
         from_dataset = self.from_clause.from_dataset
-        counts_dict[from_dataset.name] = from_dataset.count()
+        counts_dict[from_dataset.name] = from_dataset.run().count()
 
         for join in self.from_clause.joins:
-            counts_dict[join.dataset.name] = join.dataset.count()
+            counts_dict[join.dataset.name] = join.dataset.run().count()
 
         return counts_dict
 
@@ -1067,12 +1116,6 @@ class Query(DataSet):
         if self.from_clause == query.from_clause:
             self.select_clause.fuse(query.select_clause)
             self.where_clause.fuse(query.where_clause)
-
-        return self
-
-    def parameterize(self, parameter_fields):
-        """ docstring tbd """
-        self.where_clause.parameterize(parameter_fields)
 
         return self
 

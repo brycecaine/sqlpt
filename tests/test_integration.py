@@ -107,7 +107,7 @@ class SqlShapingTestCase(TestCase):
         query = Query(sql_str_scalarized)
 
         self.assertEqual(
-            query.select_clause.fields[2].query.crop().count(), 2)
+            query.select_clause.fields[2].query.crop().run().count(), 2)
 
     def test_query_is_leaf(self):
         """ docstring tbd """
@@ -122,3 +122,36 @@ class SqlShapingTestCase(TestCase):
 
         self.assertFalse(query.is_leaf())
         self.assertTrue(query.select_clause.fields[2].query.is_leaf())
+
+    def test_parameterize(self):
+        """ docstring tbd """
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        query = Query(sql_str_scalarized)
+
+        actual_sql = str(query.select_clause.fields[2].query.parameterize())
+        expected_sql = 'select name from term where term.id = :term_id'
+
+        self.assertEqual(actual_sql, expected_sql)
+
+    def test_run_parameterized_query(self):
+        """ docstring tbd """
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        query = Query(sql_str_scalarized)
+
+        actual_ct = (query.select_clause.fields[2].query
+                     .parameterize().run(term_id=2).count())
+        expected_ct = 1
+
+        self.assertEqual(actual_ct, expected_ct)
