@@ -786,16 +786,16 @@ class WhereClause(ExpressionClause):
         return token_list
 
 
-def delete_node(query, coordinates_list):
+def delete_node(query, coordinates):
     """ docstring tbd """
     node = query
 
-    for coordinates in coordinates_list:
-        for coordinate in coordinates:
-            if type(coordinate) == str:
-                node = getattr(node, coordinate)
+    for coordinate in coordinates:
+        for component in coordinate:
+            if type(component) == str:
+                node = getattr(node, component)
             else:
-                node.pop(coordinate)
+                node.pop(component)
 
     return query
 
@@ -930,27 +930,37 @@ class Query(DataSet):
 
         return locations
 
-    def delete_node(self, coordinates_list):
-        deleted_node = delete_node(self, coordinates_list)
+    def delete_node(self, coordinates):
+        """ docstring tbd """
+        remaining_query = delete_node(self, coordinates)
 
-        return deleted_node
+        return remaining_query
+
+    def crop(self):
+        """ docstring tbd """
+        remaining_query = self
+
+        with self.db_conn.connect() as db_conn:
+            try:
+                db_conn.execute(str(self))
+
+            except exc.OperationalError as e:
+                if 'no such column' in str(e):
+                    error_msg = str(e).split('\n')[0]
+                    invalid_column_name = error_msg.split(': ')[1]
+                    invalid_column_coordinates = self.locate_column(
+                        invalid_column_name)
+                    remaining_query = self.delete_node(
+                        invalid_column_coordinates)
+
+        return remaining_query
 
     def run(self):
         """ docstring tbd """
         rows = []
 
         with self.db_conn.connect() as db_conn:
-            try:
-                rows = db_conn.execute(str(self))
-            except exc.OperationalError as e:
-                if 'no such column' in str(e):
-                    error_msg = str(e).split('\n')[0]
-                    column_name = error_msg.split(': ')[1]
-                    coordinates_list = self.locate_column(column_name)
-
-                    remaining_query = delete_node(self, coordinates_list)
-                    rows = db_conn.execute(str(remaining_query))
-
+            rows = db_conn.execute(str(self))
             row_dicts = []
 
             for row in rows:

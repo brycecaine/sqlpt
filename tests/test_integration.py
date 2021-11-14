@@ -107,7 +107,7 @@ class SqlShapingTestCase(TestCase):
         query = Query(sql_str_scalarized)
 
         self.assertEqual(
-            query.select_clause.fields[2].query.count(), 2)
+            query.select_clause.fields[2].query.crop().count(), 2)
 
     def test_query_is_leaf(self):
         """ docstring tbd """
