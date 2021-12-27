@@ -1,5 +1,5 @@
 click==8.0.1
 pandas==1.2.4
 SQLAlchemy==1.4.17
-sqlparse==0.4.1
+sqlparse==0.4.2
 truth-table-generator==1.1.2
