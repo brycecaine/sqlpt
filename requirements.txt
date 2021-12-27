@@ -1,5 +1,8 @@
+bleach==3.3.0
 click==8.0.1
 pandas==1.2.4
+Pygments==2.7.4
 SQLAlchemy==1.4.17
 sqlparse==0.4.2
 truth-table-generator==1.1.2
+urllib3==1.26.5
