@@ -1,5 +1,5 @@
-Welcome to sqlpt's documentation!
-===================================
+sqlpt
+=====
 
 **sqlpt** is a Python library that is like a multimeter for sql queries.
 
