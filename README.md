@@ -84,13 +84,13 @@ https://sqlpt.readthedocs.io
 
 - [x] Count rows in a query
 - [x] Count rows in underlying datasets
-- [ ] Count expected rows in an update statement
+- [x] Count expected rows in an update statement
 - [ ] Count expected rows in a delete statement
-- [ ] Identify filters in join and where clauses
-- [ ] Check table granularity
-- [ ] Check if query is leaf query
-- [ ] Ignore dangling parameters
-- [ ] Locate invalid columns in expressions
+- [x] Identify filters in join and where clauses
+- [x] Check table granularity
+- [x] Check if query is leaf query
+- [x] Ignore dangling parameters
+- [x] Locate columns in expressions
 - [ ] Generate a diff between sql queries
 
 ## Modifying
@@ -98,7 +98,7 @@ https://sqlpt.readthedocs.io
 - [ ] Add/remove select-clause field
 - [ ] Add/remove from-clause join
 - [ ] Add/remove where-clause filter
-- [ ] Crop where-clause filter
-- [ ] Convert left join without where-clause filter to scalar subquery in select clause
-- [ ] Parameterize query with dangling comparison terms
+- [x] Crop where-clause filter
+- [x] Convert left join without where-clause filter to scalar subquery in select clause
+- [x] Parameterize query with dangling comparison terms
 - [ ] Convert select statement to update statement

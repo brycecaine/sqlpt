@@ -291,7 +291,7 @@ def get_expression_clause_parts(token_list):
 
     full_expression_words = expression.split(' ')
 
-    if full_expression_words[0] in ('on', 'where', 'having'):
+    if full_expression_words[0] in ('on', 'where', 'having', 'set'):
         full_expression_words.pop(0)
 
     expression = Expression(' '.join(full_expression_words))
@@ -908,6 +908,7 @@ def parameterize_node(query, coordinates):
     return query
 
 
+# TODO: Consider changing to SelectStatement?
 @dataclass
 class Query(DataSet):
     """ docstring tbd """
@@ -1346,3 +1347,136 @@ class Field:
         description = f'{self.expression}{alias}'
 
         return description
+
+
+@dataclass
+class UpdateClause:
+    dataset: DataSet
+
+    # TODO: Allow kwargs; args xor kwargs; apply to all __init__ methods
+    def __init__(self, *args):
+        dataset = None
+
+        if len(args) == 1:
+            sql_str = args[0]
+
+            if type(args[0]) == str:
+                sql_parts = sql_str.split()
+
+                leading_word = 'update'
+
+                if len(sql_parts) == 1:
+                    dataset = sql_parts[0]
+
+                else:
+                    # TODO: Better handle full update-statement sql getting
+                    #       passed in
+                    dataset = sql_parts[1]
+
+        self.leading_word = leading_word
+
+        self.dataset = dataset
+
+    def __str__(self):
+        update_clause_str = f'update {self.dataset}'
+
+        return update_clause_str
+
+
+def parse_set_clause(sql_str):
+    """ docstring tbd """
+    sql_tokens = (
+        remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+
+    set_clause_token_list = []
+
+    for sql_token in sql_tokens:
+        set_clause_token_list.append(sql_token)
+
+    return set_clause_token_list
+
+
+@dataclass
+class SetClause(ExpressionClause):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.leading_word = 'set'
+
+    def parse_expression_clause(self, sql_str):
+        """ docstring tbd """
+        token_list = parse_set_clause(sql_str)
+
+        return token_list
+
+
+# TODO: Find commonality between this and a Query
+@dataclass
+class UpdateStatement:
+    """ docstring tbd """
+    sql_str: SqlStr = dataclass_field(repr=False)
+    update_clause: UpdateClause
+    set_clause: SetClause
+    where_clause: WhereClause
+
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1:
+            if type(args[0]) == str:
+                # TODO: Distinguish between s_str and sql_str everywhere
+                #       s_str being a snippet? and sql_str a full query sql
+                s_str = args[0]
+                update_clause = UpdateClause(s_str)
+                set_clause = SetClause(s_str)
+                where_clause = WhereClause(s_str) or None
+
+            elif type(args[0]) == list:
+                s_str = ''
+                # TODO: Accommodate for missing where_clause
+                update_clause = args[0][0]
+                set_clause = args[0][1]
+                where_clause = args[0][2]
+
+        elif len(args) == 2:
+            s_str = ''
+            update_clause = args[0]
+            set_clause = args[1]
+            where_clause = None
+
+        elif len(args) == 3:
+            s_str = ''
+            update_clause = args[0]
+            set_clause = args[1]
+            where_clause = args[2]
+
+        else:
+            s_str = ''
+            update_clause = kwargs.get('update_clause')
+            set_clause = kwargs.get('set_clause')
+            where_clause = kwargs.get('where_clause')
+
+        self.sql_str = SqlStr(s_str)
+        self.update_clause = update_clause
+        self.set_clause = set_clause
+        self.where_clause = where_clause
+
+    def __str__(self):
+        string = str(self.update_clause)
+
+        string += f' {self.set_clause}'
+
+        if hasattr(self, 'where_clause'):
+            if self.where_clause:
+                string += f' {self.where_clause}'
+
+        return string
+
+    def count(self):
+        select_clause = SelectClause('select *')
+        print('zzzzzzzzzzz')
+        print(self.update_clause.dataset)
+        from_clause = FromClause(f'from {self.update_clause.dataset}')
+        where_clause = self.where_clause
+
+        query = Query(select_clause, from_clause, where_clause)
+
+        return query.count()

@@ -3,9 +3,10 @@
 from unittest import TestCase
 
 from sqlpt import service
-from sqlpt.sql import (Comparison, Expression, Field, FromClause, Join,
-                       OnClause, Query, SelectClause, SqlStr, Table,
-                       WhereClause)
+from sqlpt.sql import (
+    Comparison, Expression, Field, FromClause, Join, OnClause, Query,
+    SelectClause, SetClause, SqlStr, Table, UpdateClause, UpdateStatement,
+    WhereClause)
 
 
 class StringTestCase(TestCase):
@@ -669,3 +670,31 @@ class ExpressionTestCase(TestCase):
         self.assertEqual(comparison_1.operator, '=')
         self.assertEqual(comparison_1.right_term, 'd')
         self.assertEqual(str(comparison_1), 'or not c = d')
+
+
+class UpdateStatementTestCase(TestCase):
+    def test_update_statement_basic(self):
+        """ docstring tbd """
+        sql_str = "update student set major = 'BIOL' where id = 4"
+
+        update_clause = UpdateClause('update student')
+        set_clause = SetClause("set major = 'BIOL'")
+        where_clause = WhereClause('where id = 4')
+
+        expected_update_statement = UpdateStatement(
+            update_clause=update_clause, set_clause=set_clause,
+            where_clause=where_clause)
+
+        self.assertEqual(sql_str, str(expected_update_statement))
+
+    def test_update_statement_count(self):
+        """ docstring tbd """
+        sql_str = "update student set major = 'BIOL' where id = 4"
+
+        update_statement = UpdateStatement(sql_str)
+
+        actual_expected_row_count = update_statement.count()
+        expected_expected_row_count = 1
+
+        self.assertEqual(actual_expected_row_count,
+                         expected_expected_row_count)
