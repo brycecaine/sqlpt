@@ -1,7 +1,5 @@
 # sqlpt - SQL Probing Tool
 
-.. docincludebegin
-
 **`sqlpt`** is a sql probing tool for Python that provides insight into specific parts of sql queries.
 `sqlpt` is to a sql query as a multimeter is to a circuit board.
 
@@ -85,22 +83,22 @@ https://sqlpt.readthedocs.io
 ## Probing
 
 - [x] Count rows in a query
-- [x] Count rows in a query and in underlying datasets
-- [ ] Identify filtering in join and where clauses
+- [x] Count rows in underlying datasets
+- [ ] Count expected rows in an update statement
+- [ ] Count expected rows in a delete statement
+- [ ] Identify filters in join and where clauses
 - [ ] Check table granularity
 - [ ] Check if query is leaf query
 - [ ] Ignore dangling parameters
-- [ ] Diff SQL queries
-- [ ] Count expected rows in an update statement
-- [ ] Count expected rows in a delete statement
 - [ ] Locate invalid columns in expressions
+- [ ] Generate a diff between sql queries
 
-## Breadboarding (Modifying)
+## Modifying
 
 - [ ] Add/remove select-clause field
 - [ ] Add/remove from-clause join
 - [ ] Add/remove where-clause filter
 - [ ] Crop where-clause filter
 - [ ] Convert left join without where-clause filter to scalar subquery in select clause
-- [ ] Parameterize query with dangling parameters
+- [ ] Parameterize query with dangling comparison terms
 - [ ] Convert select statement to update statement
