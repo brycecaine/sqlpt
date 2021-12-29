@@ -1472,9 +1472,87 @@ class UpdateStatement:
 
     def count(self):
         select_clause = SelectClause('select *')
-        print('zzzzzzzzzzz')
-        print(self.update_clause.dataset)
         from_clause = FromClause(f'from {self.update_clause.dataset}')
+        where_clause = self.where_clause
+
+        query = Query(select_clause, from_clause, where_clause)
+
+        return query.count()
+
+
+@dataclass
+class DeleteClause:
+    leading_word: str
+
+    def __init__(self, *args):
+        self.leading_word = 'delete'
+
+    def __str__(self):
+        return self.leading_word
+
+# TODO: Find commonality between this and a Query
+@dataclass
+class DeleteStatement:
+    """ docstring tbd """
+    sql_str: SqlStr = dataclass_field(repr=False)
+    delete_clause: DeleteClause
+    from_clause: FromClause
+    where_clause: WhereClause
+
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1:
+            if type(args[0]) == str:
+                # TODO: Distinguish between s_str and sql_str everywhere
+                #       s_str being a snippet? and sql_str a full query sql
+                s_str = args[0]
+                delete_clause = DeleteClause(s_str)
+                from_clause = FromClause(s_str)
+                where_clause = WhereClause(s_str) or None
+
+            elif type(args[0]) == list:
+                s_str = ''
+                # TODO: Accommodate for missing where_clause
+                delete_clause = args[0][0]
+                from_clause = args[0][1]
+                where_clause = args[0][2]
+
+        elif len(args) == 2:
+            s_str = ''
+            delete_clause = args[0]
+            from_clause = args[1]
+            where_clause = None
+
+        elif len(args) == 3:
+            s_str = ''
+            delete_clause = args[0]
+            from_clause = args[1]
+            where_clause = args[2]
+
+        else:
+            s_str = ''
+            delete_clause = kwargs.get('delete_clause')
+            from_clause = kwargs.get('from_clause')
+            where_clause = kwargs.get('where_clause')
+
+        self.sql_str = SqlStr(s_str)
+        self.delete_clause = delete_clause
+        self.from_clause = from_clause
+        self.where_clause = where_clause
+
+    def __str__(self):
+        string = str(self.delete_clause)
+
+        string += f' {self.from_clause}'
+
+        if hasattr(self, 'where_clause'):
+            if self.where_clause:
+                string += f' {self.where_clause}'
+
+        return string
+
+    def count(self):
+        select_clause = SelectClause('select *')
+        from_clause = self.from_clause
         where_clause = self.where_clause
 
         query = Query(select_clause, from_clause, where_clause)

@@ -4,9 +4,9 @@ from unittest import TestCase
 
 from sqlpt import service
 from sqlpt.sql import (
-    Comparison, Expression, Field, FromClause, Join, OnClause, Query,
-    SelectClause, SetClause, SqlStr, Table, UpdateClause, UpdateStatement,
-    WhereClause)
+    Comparison, DeleteClause, DeleteStatement, Expression, Field, FromClause,
+    Join, OnClause, Query, SelectClause, SetClause, SqlStr, Table,
+    UpdateClause, UpdateStatement, WhereClause)
 
 
 class StringTestCase(TestCase):
@@ -694,6 +694,34 @@ class UpdateStatementTestCase(TestCase):
         update_statement = UpdateStatement(sql_str)
 
         actual_expected_row_count = update_statement.count()
+        expected_expected_row_count = 1
+
+        self.assertEqual(actual_expected_row_count,
+                         expected_expected_row_count)
+
+
+class DeleteStatementTestCase(TestCase):
+    def test_delete_statement_basic(self):
+        """ docstring tbd """
+        sql_str = "delete from student where id = 4"
+
+        delete_clause = DeleteClause('delete')
+        from_clause = FromClause('from student')
+        where_clause = WhereClause('where id = 4')
+
+        expected_delete_statement = DeleteStatement(
+            delete_clause=delete_clause, from_clause=from_clause,
+            where_clause=where_clause)
+
+        self.assertEqual(sql_str, str(expected_delete_statement))
+
+    def test_delete_statement_count(self):
+        """ docstring tbd """
+        sql_str = "delete from student where id = 4"
+
+        delete_statement = DeleteStatement(sql_str)
+
+        actual_expected_row_count = delete_statement.count()
         expected_expected_row_count = 1
 
         self.assertEqual(actual_expected_row_count,
