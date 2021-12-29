@@ -1,7 +1,19 @@
 sqlpt
 =====
 
-**sqlpt** is a Python library that is like a multimeter for sql queries.
+.. include:: ../README.rst
+   :start-after: docincludebegin
+
+Contents
+--------
+
+.. toctree::
+   :maxdepth: 2
+
+   intro
+   probing
+   modifying
+   license
 
 Check out the :doc:`usage` section for further information, including
 how to :ref:`install` the project.
