@@ -5,8 +5,8 @@
 **`sqlpt`** is a sql probing tool for Python that provides insight into specific parts of sql queries.
 `sqlpt` is to a sql query as a multimeter is to a circuit board.
 
-
 # Example
+
 ```sql
 create table person (
     id int primary key not null,
@@ -65,20 +65,25 @@ Another quick example before a more comprehensive description--let's probe a sca
 ```
 
 # Reasoning
+
 Accurate and well-performing sql queries take careful construction. Having a good understanding of the tables, joins, and filters is essential to forming such queries. `sqlpt` provides tools to inspect areas of sql queries to make more informed design decisions.
 
 These tools utilize sql parsing (`python-sqlparse`) but also provide the probing functionality described above.
 
 # Installation
+
 ```bash
 pip install sqlpt
 ```
 
 # Documentation
+
 https://sqlpt.readthedocs.io
 
 # Features
+
 ## Probing
+
 - [x] Count rows in a query
 - [x] Count rows in a query and in underlying datasets
 - [ ] Identify filtering in join and where clauses
@@ -91,6 +96,7 @@ https://sqlpt.readthedocs.io
 - [ ] Locate invalid columns in expressions
 
 ## Breadboarding (Modifying)
+
 - [ ] Add/remove select-clause field
 - [ ] Add/remove from-clause join
 - [ ] Add/remove where-clause filter
