@@ -80,7 +80,7 @@ class DataSet:
 
         # TODO: Pass fields instead of field_names
         group_by_clause = GroupByClause(field_names)
-        having_clause = HavingClause('count(*) > 1')
+        having_clause = HavingClause('having count(*) > 1')
 
         query = Query(select_clause=select_clause,
                       from_clause=from_clause,
