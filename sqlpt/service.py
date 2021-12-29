@@ -8,7 +8,6 @@ from sqlparse.sql import Comparison as SQLParseComparison
 from sqlparse.sql import Function, Identifier, IdentifierList, Token
 
 
-# TODO: Accommodate list of strings (in addition to token_list) everywhere
 def remove_whitespace(item_list, addl_chars=()):
     """ docstring tbd """
     tokens = []

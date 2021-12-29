@@ -726,3 +726,12 @@ class DeleteStatementTestCase(TestCase):
 
         self.assertEqual(actual_expected_row_count,
                          expected_expected_row_count)
+
+
+class ServiceTestCase(TestCase):
+    def test_remove_whitespace_from_strings(self):
+        input_item_list = ['test', ' ', 'list', ' ', 'of', ' ', 'strings']
+        actual_item_list = service.remove_whitespace(input_item_list)
+        expected_item_list = ['test', 'list', 'of', 'strings']
+
+        self.assertEqual(actual_item_list, expected_item_list)
