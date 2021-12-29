@@ -1,9 +1,9 @@
 """ docstring tbd """
 
-import enum
 import re
 from copy import deepcopy
-from dataclasses import dataclass, field as dataclass_field
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 
 import pandas as pd
 import sqlparse
@@ -11,9 +11,9 @@ from sqlalchemy import create_engine, exc, inspect
 from sqlparse.sql import Comparison as SqlParseComparison
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
-from sqlpt.service import (get_field_alias, get_field_expression,
-                           get_join_kind, get_truth_table_result,
-                           is_equivalent, is_join, remove_whitespace)
+from sqlpt.service import (
+    get_field_alias, get_field_expression, get_join_kind,
+    get_truth_table_result, is_equivalent, is_join, remove_whitespace)
 
 
 class SqlStr(str):
