@@ -1033,6 +1033,10 @@ class Query(DataSet):
 
         return row_dicts
 
+    def count(self, **kwargs):
+        """ docstring tbd """
+        return len(self.run(**kwargs))
+
     def counts(self):
         """ docstring tbd """
         counts_dict = {}
