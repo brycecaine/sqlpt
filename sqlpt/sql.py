@@ -80,7 +80,7 @@ class DataSet:
 
         # TODO: Pass fields instead of field_names
         group_by_clause = GroupByClause(field_names)
-        having_clause = HavingClause('having count(*) > 1')
+        having_clause = HavingClause('count(*) > 1')
 
         query = Query(select_clause=select_clause,
                       from_clause=from_clause,
@@ -291,10 +291,12 @@ def get_expression_clause_parts(token_list):
 
     full_expression_words = expression.split(' ')
 
-    leading_word = full_expression_words.pop(0)
+    if full_expression_words[0] in ('on', 'where', 'having'):
+        full_expression_words.pop(0)
+
     expression = Expression(' '.join(full_expression_words))
 
-    return leading_word, expression
+    return expression
 
 
 @dataclass
@@ -352,20 +354,18 @@ class ExpressionClause:
                 expression_clause_token_list = (
                     self.parse_expression_clause(sql_str))
 
-                leading_word, expression = get_expression_clause_parts(
+                expression = get_expression_clause_parts(
                     expression_clause_token_list)
 
             elif type(args[0]) == list:
                 expression_clause_token_list = args[0]
 
-                leading_word, expression = get_expression_clause_parts(
+                expression = get_expression_clause_parts(
                     expression_clause_token_list)
 
         elif len(args) == 2:
-            leading_word = args[0]
             expression = args[1]
 
-        self.leading_word = leading_word
         self.expression = expression
 
     def __hash__(self):
@@ -418,21 +418,19 @@ def parse_on_clause(sql_str):
 
     on_clause_token_list = []
 
-    start_appending = False
-
     for sql_token in sql_tokens:
-        if type(sql_token) == Token:
-            if sql_token.value.lower() == 'on':
-                start_appending = True
-
-        if start_appending:
-            on_clause_token_list.append(sql_token)
+        on_clause_token_list.append(sql_token)
 
     return on_clause_token_list
 
 
 class OnClause(ExpressionClause):
     """ docstring tbd """
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.leading_word = 'on'
+
     def parse_expression_clause(self, sql_str):
         """ docstring tbd """
         token_list = parse_on_clause(sql_str)
@@ -801,6 +799,11 @@ def parse_where_clause(sql_str):
 
 class WhereClause(ExpressionClause):
     """ docstring tbd """
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.leading_word = 'where'
+
     def parse_expression_clause(self, sql_str):
         """ docstring tbd """
         token_list = parse_where_clause(sql_str)
@@ -839,21 +842,19 @@ def parse_having_clause(sql_str):
 
     having_clause_token_list = []
 
-    start_appending = False
-
     for sql_token in sql_tokens:
-        if type(sql_token) == Token:
-            if sql_token.value.lower() == 'having':
-                start_appending = True
-
-        if start_appending:
-            having_clause_token_list.append(sql_token)
+        having_clause_token_list.append(sql_token)
 
     return having_clause_token_list
 
 
 class HavingClause(ExpressionClause):
     """ docstring tbd """
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.leading_word = 'having'
+
     def parse_expression_clause(self, sql_str):
         """ docstring tbd """
         token_list = parse_having_clause(sql_str)
