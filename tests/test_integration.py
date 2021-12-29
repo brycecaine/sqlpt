@@ -2,10 +2,10 @@
 
 from unittest import TestCase
 
-from sqlpt.sql import Query
+from sqlpt.sql import Query, Table
 
 
-class DatabaseTestCase(TestCase):
+class ProbingTestCase(TestCase):
     """ docstring tbd """
     def test_query_counts_basic(self):
         """ docstring tbd """
@@ -65,8 +65,26 @@ class DatabaseTestCase(TestCase):
 
         self.assertEqual(actual_counts, expected_counts)
 
+    def test_rows_unique(self):
+        """ docstring tbd """
+        table = Table('student_section')
+        field_names = ['student_id', 'term_id', 'section_id']
+        actual_uniqueness = table.rows_unique(field_names)
+        expected_uniqueness = True
 
-class SqlShapingTestCase(TestCase):
+        self.assertEqual(actual_uniqueness, expected_uniqueness)
+
+    def test_rows_not_unique(self):
+        """ docstring tbd """
+        table = Table('student_section')
+        field_names = ['term_id']
+        actual_uniqueness = table.rows_unique(field_names)
+        expected_uniqueness = False
+
+        self.assertEqual(actual_uniqueness, expected_uniqueness)
+
+
+class ModifyingTestCase(TestCase):
     """ docstring tbd """
     def test_left_join_to_select_scalar_subquery(self):
         """ docstring tbd """

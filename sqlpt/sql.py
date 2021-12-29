@@ -70,6 +70,27 @@ def get_dataset(token):
 class DataSet:
     """ docstring tbd """
 
+    def rows_unique(self, field_names):
+        """ docstring tbd """
+        fields = [Field(field_name) for field_name in field_names]
+        select_clause = SelectClause(fields)
+        select_clause.add_field('count(*)')
+
+        from_clause = FromClause(self)
+
+        # TODO: Pass fields instead of field_names
+        group_by_clause = GroupByClause(field_names)
+        having_clause = HavingClause('having count(*) > 1')
+
+        query = Query(select_clause=select_clause,
+                      from_clause=from_clause,
+                      group_by_clause=group_by_clause,
+                      having_clause=having_clause)
+
+        unique = not query.rows_exist()
+
+        return unique
+
 
 @dataclass
 class Table(DataSet):
@@ -787,6 +808,59 @@ class WhereClause(ExpressionClause):
         return token_list
 
 
+class GroupByClause:
+    field_names: list
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            if type(args[0]) == list:
+                # TODO: Also allow list of Field objects
+                field_names = args[0]
+
+        self.field_names = field_names
+
+    def __str__(self):
+        if self.field_names:
+            string = 'group by '
+
+            for field_name in self.field_names:
+                string += f'{field_name}, '
+
+            # Remove trailing comma and space
+            string = string[:-2]
+
+        return string
+
+
+def parse_having_clause(sql_str):
+    """ docstring tbd """
+    sql_tokens = (
+        remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+
+    having_clause_token_list = []
+
+    start_appending = False
+
+    for sql_token in sql_tokens:
+        if type(sql_token) == Token:
+            if sql_token.value.lower() == 'having':
+                start_appending = True
+
+        if start_appending:
+            having_clause_token_list.append(sql_token)
+
+    return having_clause_token_list
+
+
+class HavingClause(ExpressionClause):
+    """ docstring tbd """
+    def parse_expression_clause(self, sql_str):
+        """ docstring tbd """
+        token_list = parse_having_clause(sql_str)
+
+        return token_list
+
+
 def delete_node(query, coordinates):
     """ docstring tbd """
     node = query
@@ -840,8 +914,10 @@ class Query(DataSet):
     select_clause: SelectClause
     from_clause: FromClause
     where_clause: WhereClause
+    group_by_clause: GroupByClause
+    having_clause: HavingClause
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
                 # TODO: Distinguish between s_str and sql_str everywhere
@@ -851,6 +927,8 @@ class Query(DataSet):
                 # TODO: Accommodate for missing from_clause
                 from_clause = FromClause(s_str)
                 where_clause = WhereClause(s_str) or None
+                group_by_clause = None
+                having_clause = None
 
             elif type(args[0]) == list:
                 s_str = ''
@@ -858,23 +936,39 @@ class Query(DataSet):
                 select_clause = args[0][0]
                 from_clause = args[0][1]
                 where_clause = args[0][2]
+                group_by_clause = None
+                having_clause = None
 
         elif len(args) == 2:
             s_str = ''
             select_clause = args[0]
             from_clause = args[1]
             where_clause = None
+            group_by_clause = None
+            having_clause = None
 
         elif len(args) == 3:
             s_str = ''
             select_clause = args[0]
             from_clause = args[1]
             where_clause = args[2]
+            group_by_clause = None
+            having_clause = None
+
+        else:
+            s_str = ''
+            select_clause = kwargs.get('select_clause')
+            from_clause = kwargs.get('from_clause')
+            where_clause = kwargs.get('where_clause')
+            group_by_clause = kwargs.get('group_by_clause')
+            having_clause = kwargs.get('having_clause')
 
         self.sql_str = SqlStr(s_str)
         self.select_clause = select_clause
         self.from_clause = from_clause
         self.where_clause = where_clause
+        self.group_by_clause = group_by_clause
+        self.having_clause = having_clause
 
     def __hash__(self):
         return hash(str(self))
@@ -904,6 +998,14 @@ class Query(DataSet):
         if hasattr(self, 'where_clause'):
             if self.where_clause:
                 string += f' {self.where_clause}'
+
+        if hasattr(self, 'group_by_clause'):
+            if self.group_by_clause:
+                string += f' {self.group_by_clause}'
+
+        if hasattr(self, 'having_clause'):
+            if self.having_clause:
+                string += f' {self.having_clause}'
 
         return string
 
@@ -1050,6 +1152,13 @@ class Query(DataSet):
             counts_dict[join.dataset.name] = join.dataset.run().count()
 
         return counts_dict
+
+    def rows_exist(self, **kwargs):
+        row_count = self.count(**kwargs)
+
+        rows_exist_bool = True if row_count != 0 else False
+
+        return rows_exist_bool
 
     def scalarize(self):
         """ docstring tbd """
