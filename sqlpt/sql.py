@@ -3,7 +3,7 @@
 import enum
 import re
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclass_field
 
 import pandas as pd
 import sqlparse
@@ -321,7 +321,7 @@ class Expression:
 @dataclass
 class ExpressionClause:
     """ docstring tbd """
-    leading_word: str
+    leading_word: str = dataclass_field(repr=False)
     expression: Expression
 
     def __init__(self, *args):
@@ -660,8 +660,8 @@ class FromClause:
 @dataclass
 class Comparison:
     """ docstring tbd """
-    bool_operator: str
-    bool_sign: str
+    bool_operator: str = dataclass_field(repr=False)
+    bool_sign: str = dataclass_field(repr=False)
     left_term: str
     operator: str
     right_term: str
@@ -836,7 +836,7 @@ def parameterize_node(query, coordinates):
 @dataclass
 class Query(DataSet):
     """ docstring tbd """
-    sql_str: SqlStr
+    sql_str: SqlStr = dataclass_field(repr=False)
     select_clause: SelectClause
     from_clause: FromClause
     where_clause: WhereClause
@@ -1195,7 +1195,7 @@ class Field:
     """ docstring tbd """
     expression: str
     alias: str
-    query: Query
+    query: Query = dataclass_field(repr=False)
 
     def __init__(self, *args):
         if len(args) == 1:
