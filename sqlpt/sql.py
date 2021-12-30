@@ -260,6 +260,19 @@ class SelectClause:
 
         return field
 
+    def locate_field(self, s_str):
+        """ docstring tbd """
+        locations = []
+
+        for i, field in enumerate(self.fields):
+            if s_str in field.expression:
+                locations.append(('select_clause', 'fields', i))
+
+            if field.query:
+                locations.extend(field.query.locate_column(s_str))
+
+        return locations
+
     def add_field(self, *args):
         """ docstring tbd """
         field = self._get_field(*args)
@@ -682,6 +695,19 @@ class FromClause:
 
         return first_join_dataset
 
+    def locate_field(self, s_str):
+        """ docstring tbd """
+        locations = []
+
+        for i, join in enumerate(self.joins):
+            for j, comparison in enumerate(join.on_clause.expression.comparisons):
+                if s_str in comparison.left_term:
+                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j, 'left_term'))
+                elif s_str in comparison.right_term:
+                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j, 'right_term'))
+
+        return locations
+
     def remove_join(self, join):
         """ docstring tbd """
         self.joins.remove(join)
@@ -820,6 +846,18 @@ class WhereClause(ExpressionClause):
         token_list = parse_where_clause(sql_str)
 
         return token_list
+
+    def locate_field(self, s_str):
+        """ docstring tbd """
+        locations = []
+
+        for i, comparison in enumerate(self.expression.comparisons):
+            if s_str in comparison.left_term:
+                locations.append(('where_clause', 'expression', 'comparisons', i, 'left_term'))
+            elif s_str in comparison.right_term:
+                locations.append(('where_clause', 'expression', 'comparisons', i, 'right_term'))
+
+        return locations
 
 
 class GroupByClause:
@@ -1037,31 +1075,10 @@ class Query(DataSet):
 
     def locate_column(self, s_str):
         """ docstring tbd """
-        locations = []
-
-        # TODO: Move this to be a method of the SelectClause?
-        for i, field in enumerate(self.select_clause.fields):
-            if s_str in field.expression:
-                locations.append(('select_clause', 'fields', i))
-
-            if field.query:
-                locations.extend(field.query.locate_column(s_str))
-
-        # TODO: Move this to be a method of the FromClause?
-        for i, join in enumerate(self.from_clause.joins):
-            # TODO: Move this to be a method of the OnClause? (ExpressionClause)
-            for j, comparison in enumerate(join.on_clause.expression.comparisons):
-                if s_str in comparison.left_term:
-                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j, 'left_term'))
-                elif s_str in comparison.right_term:
-                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j, 'right_term'))
-
-        # TODO: Move this to be a method of the WhereClause? (ExpressionClause)
-        for i, comparison in enumerate(self.where_clause.expression.comparisons):
-            if s_str in comparison.left_term:
-                locations.append(('where_clause', 'expression', 'comparisons', i, 'left_term'))
-            elif s_str in comparison.right_term:
-                locations.append(('where_clause', 'expression', 'comparisons', i, 'right_term'))
+        locations = (
+            self.select_clause.locate_field(s_str) +
+            self.from_clause.locate_field(s_str) +
+            self.where_clause.locate_field(s_str))
 
         return locations
 
