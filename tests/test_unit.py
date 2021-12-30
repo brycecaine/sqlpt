@@ -157,7 +157,6 @@ class StringListTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
 
-        # TODO: Document all different ways to construct each clause
         expected_select_clause = SelectClause(['select', ['fld_1', 'fld_2']])
         expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])

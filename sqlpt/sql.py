@@ -953,8 +953,6 @@ class Query(DataSet):
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
-                # TODO: Distinguish between s_str and sql_str everywhere
-                #       s_str being a snippet? and sql_str a full query sql
                 s_str = args[0]
                 select_clause = SelectClause(s_str) or None
                 from_clause = FromClause(s_str) or None
@@ -1276,7 +1274,6 @@ class Query(DataSet):
         self.where_clause.add_comparison(comparison)
 
 
-# TODO: Replace sql_str with s_str where it makes sense
 def get_query_from_subquery_str(s_str):
     """ docstring tbd """
     query = Query(s_str[1:-1]) if s_str[:7] == '(select' else None
@@ -1394,8 +1391,6 @@ class UpdateStatement:
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
-                # TODO: Distinguish between s_str and sql_str everywhere
-                #       s_str being a snippet? and sql_str a full query sql
                 s_str = args[0]
                 update_clause = UpdateClause(s_str) or None
                 set_clause = SetClause(s_str) or None
@@ -1459,8 +1454,6 @@ class DeleteStatement:
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
-                # TODO: Distinguish between s_str and sql_str everywhere
-                #       s_str being a snippet? and sql_str a full query sql
                 s_str = args[0]
                 delete_clause = DeleteClause(s_str) or None
                 from_clause = FromClause(s_str) or None

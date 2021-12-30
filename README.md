@@ -102,3 +102,10 @@ https://sqlpt.readthedocs.io
 - [x] Convert left join without where-clause filter to scalar subquery in select clause
 - [x] Parameterize query with dangling comparison terms
 - [ ] Convert select statement to update statement
+
+# Future areas of improvement
+
+## Code
+- [ ] Underscore methods and where to locate methods (move some to service)
+- [ ] Distinguish between s_str and sql_str everywhere (s_str being a snippet? and sql_str a full query sql)
+- [ ] Document all different ways to construct each clause
