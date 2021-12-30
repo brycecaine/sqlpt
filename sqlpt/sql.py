@@ -452,11 +452,11 @@ class Join:
     def __init__(self, *args):
         if len(args) == 1:
             if type(args[0]) == str:
-                # TODO: Implement this
+                # FUTURE: Implement this
                 pass
 
             if type(args[0]) == list:
-                # TODO: Implement this
+                # FUTURE: Implement this
                 pass
 
         elif len(args) == 3:
