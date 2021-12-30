@@ -1221,13 +1221,13 @@ class Query(DataSet):
                 contains_subqueries = True
 
         if not contains_subqueries:
-            # TODO: Check if a subquery lives in the join's on_clause
+            # FUTURE: Check if a subquery lives in the join's on_clause
             for join in self.from_clause.joins:
                 if type(join.dataset) == Query:
                     contains_subqueries = True
                     break
 
-        # TODO: Check if a subquery lives in the where_clause
+        # FUTURE: Check if a subquery lives in the where_clause
 
         return not contains_subqueries
 
@@ -1369,8 +1369,6 @@ class UpdateClause:
                     dataset = sql_parts[0]
 
                 else:
-                    # TODO: Better handle full update-statement sql getting
-                    #       passed in
                     dataset = sql_parts[1]
 
         self.leading_word = leading_word
