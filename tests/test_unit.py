@@ -373,6 +373,13 @@ class QueryTestCase(TestCase):
 
         self.assertEqual(str(actual_query), self.sql_str)
 
+    def test_query_without_from_clause(self):
+        """ docstring tbd """
+        sql_str = 'select 1'
+        actual_query = Query(sql_str)
+
+        self.assertEqual(str(actual_query), sql_str)
+
 
 class ComplexQueryTestCase(TestCase):
     """ docstring tbd """
