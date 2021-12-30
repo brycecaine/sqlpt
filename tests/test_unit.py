@@ -598,7 +598,7 @@ class ComparisonTestCase(TestCase):
         """ docstring tbd """
         comparison = Comparison('a = b')
 
-        self.assertEqual(comparison.bool_operator, '')
+        self.assertEqual(comparison.bool_conjunction, '')
         self.assertEqual(comparison.bool_sign, '')
         self.assertEqual(str(comparison), 'a = b')
 
@@ -611,7 +611,7 @@ class ExpressionTestCase(TestCase):
 
         comparison = expression.comparisons[0]
 
-        self.assertEqual(comparison.bool_operator, '')
+        self.assertEqual(comparison.bool_conjunction, '')
         self.assertEqual(comparison.bool_sign, '')
         self.assertEqual(str(comparison), 'a = b')
 
@@ -622,11 +622,11 @@ class ExpressionTestCase(TestCase):
         comparison_0 = expression.comparisons[0]
         comparison_1 = expression.comparisons[1]
 
-        self.assertEqual(comparison_0.bool_operator, '')
+        self.assertEqual(comparison_0.bool_conjunction, '')
         self.assertEqual(comparison_0.bool_sign, '')
         self.assertEqual(str(comparison_0), 'a = b')
 
-        self.assertEqual(comparison_1.bool_operator, 'and')
+        self.assertEqual(comparison_1.bool_conjunction, 'and')
         self.assertEqual(comparison_1.bool_sign, '')
         self.assertEqual(comparison_1.left_term, 'c')
         self.assertEqual(comparison_1.operator, '=')
@@ -640,11 +640,11 @@ class ExpressionTestCase(TestCase):
         comparison_0 = expression.comparisons[0]
         comparison_1 = expression.comparisons[1]
 
-        self.assertEqual(comparison_0.bool_operator, '')
+        self.assertEqual(comparison_0.bool_conjunction, '')
         self.assertEqual(comparison_0.bool_sign, '')
         self.assertEqual(str(comparison_0), 'a = b')
 
-        self.assertEqual(comparison_1.bool_operator, 'and')
+        self.assertEqual(comparison_1.bool_conjunction, 'and')
         self.assertEqual(comparison_1.bool_sign, 'not')
         self.assertEqual(comparison_1.left_term, 'c')
         self.assertEqual(comparison_1.operator, '=')
@@ -658,11 +658,11 @@ class ExpressionTestCase(TestCase):
         comparison_0 = expression.comparisons[0]
         comparison_1 = expression.comparisons[1]
 
-        self.assertEqual(comparison_0.bool_operator, '')
+        self.assertEqual(comparison_0.bool_conjunction, '')
         self.assertEqual(comparison_0.bool_sign, '')
         self.assertEqual(str(comparison_0), 'a = b')
 
-        self.assertEqual(comparison_1.bool_operator, 'or')
+        self.assertEqual(comparison_1.bool_conjunction, 'or')
         self.assertEqual(comparison_1.bool_sign, '')
         self.assertEqual(comparison_1.left_term, 'c')
         self.assertEqual(comparison_1.operator, '=')
@@ -676,11 +676,11 @@ class ExpressionTestCase(TestCase):
         comparison_0 = expression.comparisons[0]
         comparison_1 = expression.comparisons[1]
 
-        self.assertEqual(comparison_0.bool_operator, '')
+        self.assertEqual(comparison_0.bool_conjunction, '')
         self.assertEqual(comparison_0.bool_sign, '')
         self.assertEqual(str(comparison_0), 'a = b')
 
-        self.assertEqual(comparison_1.bool_operator, 'or')
+        self.assertEqual(comparison_1.bool_conjunction, 'or')
         self.assertEqual(comparison_1.bool_sign, 'not')
         self.assertEqual(comparison_1.left_term, 'c')
         self.assertEqual(comparison_1.operator, '=')

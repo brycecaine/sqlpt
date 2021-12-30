@@ -719,7 +719,7 @@ class FromClause:
 @dataclass
 class Comparison:
     """ docstring tbd """
-    bool_operator: str = dataclass_field(repr=False)
+    bool_conjunction: str = dataclass_field(repr=False)
     bool_sign: str = dataclass_field(repr=False)
     left_term: str
     operator: str
@@ -757,11 +757,11 @@ class Comparison:
                         elements.extend(els)
 
             if elements[0] in ('and', 'or'):
-                bool_operator = elements.pop(0)
+                bool_conjunction = elements.pop(0)
             elif elements[0] in ('not'):
                 bool_sign = elements.pop(0)
             else:
-                bool_operator = ''
+                bool_conjunction = ''
 
             if elements[0] == 'not':
                 bool_sign = elements.pop(0)
@@ -772,7 +772,7 @@ class Comparison:
             operator = elements[1]
             right_term = elements[2]
 
-        self.bool_operator = bool_operator
+        self.bool_conjunction = bool_conjunction
         self.bool_sign = bool_sign
         self.left_term = left_term
         self.operator = operator
@@ -784,8 +784,8 @@ class Comparison:
     def __str__(self):
         string = ''
 
-        if self.bool_operator:
-            string += f'{self.bool_operator} '
+        if self.bool_conjunction:
+            string += f'{self.bool_conjunction} '
 
         if self.bool_sign:
             string += f'{self.bool_sign} '
@@ -1121,8 +1121,6 @@ class Query(DataSet):
 
         return parameterized_query
 
-    # TODO: Not related to this location of code, but: change
-    #       Comparison.bool_operator to Comparison.bool_conjunction
     def parameterize(self):
         """ docstring tbd """
         # self.where_clause.parameterize(parameter_fields)
