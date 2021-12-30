@@ -1306,7 +1306,6 @@ class Field:
         if len(args) == 1:
             if type(args[0]) == str:
                 field_str = args[0]
-                # TODO: Make sure this accommodates subqueries as expressions
                 expression = get_field_expression(field_str)
                 alias = get_field_alias(field_str)
                 query = Query(expression[1:-1]) or None
