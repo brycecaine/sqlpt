@@ -387,11 +387,8 @@ class ExpressionClause:
                 expression = get_expression_clause_parts(
                     expression_clause_token_list)
 
-            elif type(args[0]) == Expression:
-                expression = args[0]
-
         else:
-            expression = kwargs('expression')
+            expression = kwargs.get('expression')
 
         self.expression = expression
 
@@ -1168,7 +1165,7 @@ class Query(DataSet):
 
                         subquery_select_clause = SelectClause([field])
                         subquery_from_clause = FromClause(from_dataset=join.dataset)
-                        subquery_where_clause = WhereClause(join.on_clause.expression)
+                        subquery_where_clause = WhereClause(expression=join.on_clause.expression)
                         subquery = Query(
                             select_clause=subquery_select_clause,
                             from_clause=subquery_from_clause,
@@ -1329,7 +1326,6 @@ class Field:
 class UpdateClause:
     dataset: DataSet
 
-    # TODO: Allow kwargs; args xor kwargs; apply to all __init__ methods
     def __init__(self, *args, **kwargs):
         dataset = None
 
