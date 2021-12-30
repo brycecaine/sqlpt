@@ -566,6 +566,15 @@ class FieldTestCase(TestCase):
         self.assertEqual(field.alias, 'a')
         self.assertEqual(type(field.query), Query)
 
+    def test_field_no_subquery(self):
+        """ docstring tbd """
+        field = Field(['column_name', 'a'])
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, 'column_name')
+        self.assertEqual(field.alias, 'a')
+        self.assertEqual(field.query, None)
+
 
 class SelectClauseTestCase(TestCase):
     """ docstring tbd """

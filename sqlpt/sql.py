@@ -231,6 +231,12 @@ class SelectClause:
     def __hash__(self):
         return hash(str(self))
 
+    def __bool__(self):
+        if self.fields:
+            return True
+
+        return False
+
     def __str__(self):
         select_clause_str = f"select {', '.join(self.field_strs)}"
 
@@ -929,7 +935,7 @@ class Query(DataSet):
                 # TODO: Distinguish between s_str and sql_str everywhere
                 #       s_str being a snippet? and sql_str a full query sql
                 s_str = args[0]
-                select_clause = SelectClause(s_str)
+                select_clause = SelectClause(s_str) or None
                 from_clause = FromClause(s_str) or None
                 where_clause = WhereClause(s_str) or None
                 group_by_clause = None
@@ -967,6 +973,13 @@ class Query(DataSet):
                 where_clauses_equal)
 
         return query_equal
+
+    def __bool__(self):
+        if self.select_clause:
+            return True
+
+        return False
+
 
     def __str__(self):
         string = str(self.select_clause)
@@ -1296,13 +1309,12 @@ class Field:
                 # TODO: Make sure this accommodates subqueries as expressions
                 expression = get_field_expression(field_str)
                 alias = get_field_alias(field_str)
-                query = Query(expression)
+                query = Query(expression) or None
 
             elif type(args[0]) == list:
-                # TODO: What is the use case here again?
                 expression = args[0][0]
                 alias = args[0][1]
-                query = Query(expression)
+                query = Query(expression) or None
 
         elif len(args) == 2:
             if type(args[0]) == Query:
