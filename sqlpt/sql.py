@@ -78,7 +78,6 @@ class DataSet:
 
         from_clause = FromClause(self)
 
-        # TODO: Pass fields instead of field_names
         group_by_clause = GroupByClause(field_names)
         having_clause = HavingClause('having count(*) > 1')
 
@@ -554,6 +553,12 @@ class FromClause:
     def __hash__(self):
         return hash(str(self))
 
+    def __bool__(self):
+        if self.from_dataset:
+            return True
+
+        return False
+
     def __str__(self):
         from_clause_str = ''
 
@@ -908,7 +913,6 @@ def parameterize_node(query, coordinates):
     return query
 
 
-# TODO: Consider changing to SelectStatement?
 @dataclass
 class Query(DataSet):
     """ docstring tbd """
@@ -926,8 +930,7 @@ class Query(DataSet):
                 #       s_str being a snippet? and sql_str a full query sql
                 s_str = args[0]
                 select_clause = SelectClause(s_str)
-                # TODO: Accommodate for missing from_clause
-                from_clause = FromClause(s_str)
+                from_clause = FromClause(s_str) or None
                 where_clause = WhereClause(s_str) or None
                 group_by_clause = None
                 having_clause = None
