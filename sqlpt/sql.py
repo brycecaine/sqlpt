@@ -414,23 +414,6 @@ class ExpressionClause:
 
         return equivalent
 
-    def parameterize(self, parameter_fields):
-        """ docstring tbd
-
-        for comparison in self.comparisons:
-            left_term = comparison.left_term
-
-            if left_term in parameter_fields:
-                comparison.right_term = f':{left_term}'
-
-        return self
-        """
-
-        # TODO Start with matching the comparison, kind of like this:
-        #      expr_w_parens = re.sub(r'(\w+\s*=\s*\w+)', r'(\1)', expr)
-
-        raise Exception(f'Needs implementation: {parameter_fields}')
-
 
 def parse_on_clause(sql_str):
     """ docstring tbd """
