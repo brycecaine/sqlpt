@@ -1309,12 +1309,12 @@ class Field:
                 # TODO: Make sure this accommodates subqueries as expressions
                 expression = get_field_expression(field_str)
                 alias = get_field_alias(field_str)
-                query = Query(expression) or None
+                query = Query(expression[1:-1]) or None
 
             elif type(args[0]) == list:
                 expression = args[0][0]
                 alias = args[0][1]
-                query = Query(expression) or None
+                query = Query(expression[1:-1]) or None
 
         elif len(args) == 2:
             if type(args[0]) == Query:
