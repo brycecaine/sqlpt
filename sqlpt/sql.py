@@ -1408,7 +1408,6 @@ class SetClause(ExpressionClause):
         return token_list
 
 
-# TODO: Find commonality between this and a Query
 @dataclass
 class UpdateStatement:
     """ docstring tbd """
@@ -1423,28 +1422,9 @@ class UpdateStatement:
                 # TODO: Distinguish between s_str and sql_str everywhere
                 #       s_str being a snippet? and sql_str a full query sql
                 s_str = args[0]
-                update_clause = UpdateClause(s_str)
-                set_clause = SetClause(s_str)
+                update_clause = UpdateClause(s_str) or None
+                set_clause = SetClause(s_str) or None
                 where_clause = WhereClause(s_str) or None
-
-            elif type(args[0]) == list:
-                s_str = ''
-                # TODO: Accommodate for missing where_clause
-                update_clause = args[0][0]
-                set_clause = args[0][1]
-                where_clause = args[0][2]
-
-        elif len(args) == 2:
-            s_str = ''
-            update_clause = args[0]
-            set_clause = args[1]
-            where_clause = None
-
-        elif len(args) == 3:
-            s_str = ''
-            update_clause = args[0]
-            set_clause = args[1]
-            where_clause = args[2]
 
         else:
             s_str = ''
@@ -1469,6 +1449,7 @@ class UpdateStatement:
         return string
 
     def count(self):
+        """ docstring tbd """
         select_clause = SelectClause('select *')
         from_clause = FromClause(f'from {self.update_clause.dataset}')
         where_clause = self.where_clause
@@ -1483,6 +1464,7 @@ class UpdateStatement:
 
 @dataclass
 class DeleteClause:
+    """ docstring tbd """
     leading_word: str
 
     def __init__(self, *args):
@@ -1491,7 +1473,6 @@ class DeleteClause:
     def __str__(self):
         return self.leading_word
 
-# TODO: Find commonality between this and a Query
 @dataclass
 class DeleteStatement:
     """ docstring tbd """
@@ -1506,28 +1487,9 @@ class DeleteStatement:
                 # TODO: Distinguish between s_str and sql_str everywhere
                 #       s_str being a snippet? and sql_str a full query sql
                 s_str = args[0]
-                delete_clause = DeleteClause(s_str)
-                from_clause = FromClause(s_str)
+                delete_clause = DeleteClause(s_str) or None
+                from_clause = FromClause(s_str) or None
                 where_clause = WhereClause(s_str) or None
-
-            elif type(args[0]) == list:
-                s_str = ''
-                # TODO: Accommodate for missing where_clause
-                delete_clause = args[0][0]
-                from_clause = args[0][1]
-                where_clause = args[0][2]
-
-        elif len(args) == 2:
-            s_str = ''
-            delete_clause = args[0]
-            from_clause = args[1]
-            where_clause = None
-
-        elif len(args) == 3:
-            s_str = ''
-            delete_clause = args[0]
-            from_clause = args[1]
-            where_clause = args[2]
 
         else:
             s_str = ''
