@@ -1193,7 +1193,6 @@ class Query(DataSet):
 
                         alias = field.alias or field.expression
                         subquery_field = Field(subquery, alias)
-                        # TODO: Substitute this with add_subquery_field?
                         self.select_clause.add_field(subquery_field)
 
                         joins_to_remove.append(join)
@@ -1281,10 +1280,6 @@ class Query(DataSet):
         string = f'({self.__str__()})'
 
         return string
-
-    def add_subquery_field(self, subquery_str, alias):
-        """ docstring tbd """
-        self.select_clause.add_field(subquery_str, alias)
 
     def filter_by_subquery(self, subquery_str, operator, value):
         """ docstring tbd """
