@@ -41,7 +41,7 @@ class SqlStr(str):
             expression = expression_part_1
 
         alias = match_obj.group(3)
-        field = Field(expression, alias)
+        field = Field(expression=expression, alias=alias)
 
         return field
 
@@ -76,7 +76,7 @@ class DataSet:
         select_clause = SelectClause(fields)
         select_clause.add_field('count(*)')
 
-        from_clause = FromClause(self)
+        from_clause = FromClause(from_dataset=self)
 
         group_by_clause = GroupByClause(field_names)
         having_clause = HavingClause('having count(*) > 1')
@@ -165,7 +165,7 @@ def parse_fields_from_token_list(field_token_list):
         expression = match_obj.group('expression')
         alias = match_obj.group('alias')
 
-        field = Field(expression, alias)
+        field = Field(expression=expression, alias=alias)
         fields.append(field)
 
     return fields
@@ -197,7 +197,7 @@ class SelectClause:
     """ docstring tbd """
     fields: list
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
@@ -225,6 +225,9 @@ class SelectClause:
                         fields = convert_token_list_to_fields(token_list)
                 else:
                     fields = []
+
+        else:
+            fields = kwargs.get('fields')
 
         self.fields = fields
 
@@ -321,7 +324,7 @@ def get_expression_clause_parts(token_list):
 class Expression:
     comparisons: list
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
                 comparisons = []
@@ -346,6 +349,9 @@ class Expression:
                         comparison = Comparison(comparison_token_list)
                         comparisons.append(comparison)
 
+        else:
+            comparisons = kwargs.get('comparisons')
+
         self.comparisons = comparisons
 
     def __str__(self):
@@ -365,7 +371,7 @@ class ExpressionClause:
     leading_word: str = dataclass_field(repr=False)
     expression: Expression
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
@@ -384,8 +390,8 @@ class ExpressionClause:
             elif type(args[0]) == Expression:
                 expression = args[0]
 
-        elif len(args) == 2:
-            expression = args[1]
+        else:
+            expression = kwargs('expression')
 
         self.expression = expression
 
@@ -430,8 +436,8 @@ def parse_on_clause(sql_str):
 
 class OnClause(ExpressionClause):
     """ docstring tbd """
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.leading_word = 'on'
 
@@ -449,20 +455,16 @@ class Join:
     dataset: DataSet
     on_clause: OnClause
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
                 # FUTURE: Implement this
                 pass
 
-            if type(args[0]) == list:
-                # FUTURE: Implement this
-                pass
-
-        elif len(args) == 3:
-            kind = args[0]
-            dataset = args[1]
-            on_clause = args[2]
+        else:
+            kind = kwargs.get('kind')
+            dataset = kwargs.get('dataset')
+            on_clause = kwargs.get('on_clause')
 
         self.kind = kind
         self.dataset = dataset
@@ -505,8 +507,7 @@ class FromClause:
     from_dataset: DataSet
     joins: list
 
-    # TODO: Allow kwargs; args xor kwargs; apply to all __init__ methods
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
@@ -515,19 +516,9 @@ class FromClause:
                 from_dataset, joins = self._parse_from_clause_from_tokens(
                     from_clause_token_list)
 
-            elif type(args[0]) == list:
-                from_clause_token_list = args[0]
-
-                from_dataset, joins = self._parse_from_clause_from_tokens(
-                    from_clause_token_list)
-
-            elif isinstance(args[0], DataSet):
-                from_dataset = args[0]
-                joins = []
-
-        elif len(args) == 2:
-            from_dataset = args[0]
-            joins = args[1]
+        else:
+            from_dataset = kwargs.get('from_dataset')
+            joins = kwargs.get('joins', [])
 
         self.from_dataset = from_dataset
         self.joins = joins
@@ -608,8 +599,10 @@ class FromClause:
                         join_dataset = deepcopy(str(dataset))
                         join_on_clause = OnClause(on_tokens)
 
-                        join = Join(
-                            join_kind, join_dataset, join_on_clause)
+                        join = Join(kind=join_kind,
+                                    dataset=join_dataset,
+                                    on_clause=join_on_clause)
+
                         joins.append(join)
 
                         kind = None
@@ -633,7 +626,7 @@ class FromClause:
             if kind and dataset and on_tokens:
                 on_clause = OnClause(on_tokens)
 
-                join = Join(kind, dataset, on_clause)
+                join = Join(kind=kind, dataset=dataset, on_clause=on_clause)
                 joins.append(join)
 
         return from_dataset, joins
@@ -643,16 +636,15 @@ class FromClause:
         equivalent = False
 
         if isinstance(other, self.__class__):
-            # TODO: Allow for equivalence if tables and comparisons are out of
-            # order
-
+            # FUTURE: Allow for equivalence if tables and comparisons are out
+            # of order
             equivalent = (self.from_dataset == other.from_dataset
                           or
                           (self.from_dataset == other.first_join_dataset()
                            and
                            other.from_dataset == self.first_join_dataset()))
 
-            # TODO: Work this out
+            # FUTURE: Work this out
             if equivalent:
                 for self_join in self.joins:
                     for other_join in other.joins:
@@ -706,7 +698,7 @@ class Comparison:
     operator: str
     right_term: str
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
                 comparison_str = args[0]
@@ -718,8 +710,8 @@ class Comparison:
                 elements = [comparison_token.value
                             for comparison_token in comparison_tokens]
 
+            # FUTURE: De-support list arg
             elif type(args[0]) == list:
-                # TODO Untested
                 sqlparse_comparison = args[0][0]
 
                 elements = []
@@ -731,7 +723,7 @@ class Comparison:
                     elif type(sqlparse_comparison) == SqlParseComparison:
                         comparison_tokens = (
                             remove_whitespace(sqlparse_comparison.tokens))
-                        
+
                         els = [comparison_token.value
                                for comparison_token in comparison_tokens]
 
@@ -752,6 +744,13 @@ class Comparison:
             left_term = elements[0]
             operator = elements[1]
             right_term = elements[2]
+
+        else:
+            bool_conjunction = kwargs.get('bool_conjunction')
+            bool_sign = kwargs.get('bool_sign')
+            left_term = kwargs.get('left_term')
+            operator = kwargs.get('operator')
+            right_term = kwargs.get('right_term')
 
         self.bool_conjunction = bool_conjunction
         self.bool_sign = bool_sign
@@ -820,8 +819,8 @@ def parse_where_clause(sql_str):
 
 class WhereClause(ExpressionClause):
     """ docstring tbd """
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.leading_word = 'where'
 
@@ -847,11 +846,14 @@ class WhereClause(ExpressionClause):
 class GroupByClause:
     field_names: list
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == list:
-                # TODO: Also allow list of Field objects
+                # FUTURE: Allow list of Field objects
                 field_names = args[0]
+
+        else:
+            field_names = kwargs.get('field_names')
 
         self.field_names = field_names
 
@@ -883,8 +885,8 @@ def parse_having_clause(sql_str):
 
 class HavingClause(ExpressionClause):
     """ docstring tbd """
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.leading_word = 'having'
 
@@ -1165,7 +1167,7 @@ class Query(DataSet):
                         self.select_clause.remove_field(field)
 
                         subquery_select_clause = SelectClause([field])
-                        subquery_from_clause = FromClause(join.dataset)
+                        subquery_from_clause = FromClause(from_dataset=join.dataset)
                         subquery_where_clause = WhereClause(join.on_clause.expression)
                         subquery = Query(
                             select_clause=subquery_select_clause,
@@ -1173,7 +1175,8 @@ class Query(DataSet):
                             where_clause=subquery_where_clause)
 
                         alias = field.alias or field.expression
-                        subquery_field = Field(subquery, alias)
+                        expression = f'({str(subquery)})'
+                        subquery_field = Field(expression=expression, alias=alias, query=subquery)
                         self.select_clause.add_field(subquery_field)
 
                         joins_to_remove.append(join)
@@ -1271,7 +1274,7 @@ class Query(DataSet):
             value = ','.join(f"{item}" for item in value if item)
             value = f'({value})'
 
-        comparison = Comparison(subquery_str, operator, value)
+        comparison = Comparison(left_term=subquery_str, operator=operator, right_term=value)
 
         self.where_clause.add_comparison(comparison)
 
@@ -1291,30 +1294,22 @@ class Field:
     alias: str
     query: Query = dataclass_field(repr=False)
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
                 field_str = args[0]
                 expression = get_field_expression(field_str)
                 alias = get_field_alias(field_str)
-                query = Query(expression[1:-1]) or None
+                query = get_query_from_subquery_str(expression)
 
-            elif type(args[0]) == list:
-                expression = args[0][0]
-                alias = args[0][1]
-                query = Query(expression[1:-1]) or None
+        else:
+            expression = kwargs.get('expression')
+            alias = kwargs.get('alias')
 
-        elif len(args) == 2:
-            if type(args[0]) == Query:
-                expression = f'({str(args[0])})'
-                alias = args[1]
-                query = args[0]
-
+            if expression:
+                query = kwargs.get('query', get_query_from_subquery_str(expression))
             else:
-                expression = args[0]
-                alias = args[1]
-                # query = Query(args[0][1:-1]) if args[0][:7] == '(select' else None
-                query = get_query_from_subquery_str(args[0])
+                query = None
 
         self.expression = expression
         self.alias = alias
@@ -1335,7 +1330,7 @@ class UpdateClause:
     dataset: DataSet
 
     # TODO: Allow kwargs; args xor kwargs; apply to all __init__ methods
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         dataset = None
 
         if len(args) == 1:
@@ -1351,6 +1346,9 @@ class UpdateClause:
 
                 else:
                     dataset = sql_parts[1]
+
+        else:
+            leading_word = kwargs.get('leading_word')
 
         self.leading_word = leading_word
 
@@ -1377,8 +1375,8 @@ def parse_set_clause(sql_str):
 
 @dataclass
 class SetClause(ExpressionClause):
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.leading_word = 'set'
 
@@ -1448,7 +1446,7 @@ class DeleteClause:
     """ docstring tbd """
     leading_word: str
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.leading_word = 'delete'
 
     def __str__(self):

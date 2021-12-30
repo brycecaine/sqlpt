@@ -136,7 +136,7 @@ class StringListTestCase(TestCase):
         sql_str = "select * from dual where dummy = 'X'"
 
         expected_select_clause = SelectClause(['select', '*'])
-        expected_from_clause = FromClause(['from', 'dual', []])
+        expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
@@ -147,7 +147,7 @@ class StringListTestCase(TestCase):
         sql_str = "select fld_1 from dual where dummy = 'X'"
 
         expected_select_clause = SelectClause(['select', ['fld_1']])
-        expected_from_clause = FromClause(['from', 'dual', []])
+        expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
@@ -159,7 +159,7 @@ class StringListTestCase(TestCase):
 
         # TODO: Document all different ways to construct each clause
         expected_select_clause = SelectClause(['select', ['fld_1', 'fld_2']])
-        expected_from_clause = FromClause(['from', 'dual', []])
+        expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
@@ -246,37 +246,37 @@ class FunctionTestCase(TestCase):
     def test_parse_field_basic_no_alias(self):
         """ docstring tbd """
         actual_field = SqlStr('a').parse_field()
-        expected_field = Field('a', '')
+        expected_field = Field('a')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_basic_with_alias(self):
         """ docstring tbd """
         actual_field = SqlStr('b c').parse_field()
-        expected_field = Field('b', 'c')
+        expected_field = Field('b c')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_function_no_alias(self):
         """ docstring tbd """
         actual_field = SqlStr('fn(x, y)').parse_field()
-        expected_field = Field('fn(x, y)', '')
+        expected_field = Field('fn(x, y)')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_function_with_alias(self):
         """ docstring tbd """
         actual_field = SqlStr('fn(x, y) z').parse_field()
-        expected_field = Field('fn(x, y)', 'z')
+        expected_field = Field('fn(x, y) z')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_subquery_no_alias(self):
         """ docstring tbd """
         actual_field = SqlStr('(select * from dual)').parse_field()
-        expected_field = Field('(select * from dual)', '')
+        expected_field = Field(expression='(select * from dual)', alias='')
         self.assertEqual(actual_field, expected_field)
 
     def test_parse_field_subquery_with_alias(self):
         """ docstring tbd """
         actual_field = SqlStr('(select * from dual) z').parse_field()
-        expected_field = Field('(select * from dual)', 'z')
+        expected_field = Field('(select * from dual) z')
         self.assertEqual(actual_field, expected_field)
 
     # TODO: Re-include this test after refactoring (make it pass too)
@@ -309,10 +309,10 @@ class QueryTestCase(TestCase):
     def test_fields(self):
         """ docstring tbd """
         expected_fields = [
-            Field('a', 'name'),
-            Field('b', ''),
-            Field('fn(id, dob)', 'age'),
-            Field('fn(id, height)', ''),
+            Field('a name'),
+            Field('b'),
+            Field('fn(id, dob) age'),
+            Field('fn(id, height)'),
         ]
         actual_fields = self.query.select_clause.fields
 
@@ -335,7 +335,7 @@ class QueryTestCase(TestCase):
 
     def test_joins(self):
         """ docstring tbd """
-        expected_joins = [Join('inner', Table(name='d'), OnClause('on e = f'))]
+        expected_joins = [Join(kind='inner', dataset=Table(name='d'), on_clause=OnClause('on e = f'))]
 
         actual_joins = self.query.from_clause.joins
 
@@ -345,10 +345,10 @@ class QueryTestCase(TestCase):
 
     def test_from_clause(self):
         """ docstring tbd """
-        expected_joins = [Join('inner', Table(name='d'), OnClause('on e = f'))]
+        expected_joins = [Join(kind='inner', dataset=Table(name='d'), on_clause=OnClause('on e = f'))]
 
         expected_table = Table(name='c')
-        expected_from_clause = FromClause(expected_table, expected_joins)
+        expected_from_clause = FromClause(from_dataset=expected_table, joins=expected_joins)
         actual_from_clause = self.query.from_clause
 
         self.assertEqual(actual_from_clause, expected_from_clause)
@@ -542,7 +542,7 @@ class FieldTestCase(TestCase):
 
     def test_field_list_normal(self):
         """ docstring tbd """
-        field = Field(['exp', 'a'])
+        field = Field('exp a')
 
         self.assertTrue(field)
         self.assertEqual(field.expression, 'exp')
@@ -559,7 +559,7 @@ class FieldTestCase(TestCase):
 
     def test_field_list_subquery(self):
         """ docstring tbd """
-        field = Field(['(select fld from tbl)', 'a'])
+        field = Field('(select fld from tbl) a')
 
         self.assertTrue(field)
         self.assertEqual(field.expression, '(select fld from tbl)')
@@ -568,7 +568,7 @@ class FieldTestCase(TestCase):
 
     def test_field_no_subquery(self):
         """ docstring tbd """
-        field = Field(['column_name', 'a'])
+        field = Field('column_name a')
 
         self.assertTrue(field)
         self.assertEqual(field.expression, 'column_name')
