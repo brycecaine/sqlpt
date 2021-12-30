@@ -1148,10 +1148,10 @@ class Query(DataSet):
         counts_dict['query'] = query_count
 
         from_dataset = self.from_clause.from_dataset
-        counts_dict[from_dataset.name] = from_dataset.run().count()
+        counts_dict[from_dataset.name] = from_dataset.count()
 
         for join in self.from_clause.joins:
-            counts_dict[join.dataset.name] = join.dataset.run().count()
+            counts_dict[join.dataset.name] = join.dataset.count()
 
         return counts_dict
 
