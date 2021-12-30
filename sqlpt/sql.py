@@ -1044,10 +1044,8 @@ class Query(DataSet):
             if s_str in field.expression:
                 locations.append(('select_clause', 'fields', i))
 
-            # TODO: Improve this check; should a field always have a query attribute even if None? Now, I'm leaning toward no
-            if hasattr(field, 'query'):
-                if type(field.query) == Query:
-                    locations.extend(field.query.locate_column(s_str))
+            if field.query:
+                locations.extend(field.query.locate_column(s_str))
 
         # TODO: Move this to be a method of the FromClause?
         for i, join in enumerate(self.from_clause.joins):
