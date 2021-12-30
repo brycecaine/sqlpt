@@ -381,6 +381,9 @@ class ExpressionClause:
                 expression = get_expression_clause_parts(
                     expression_clause_token_list)
 
+            elif type(args[0]) == Expression:
+                expression = args[0]
+
         elif len(args) == 2:
             expression = args[1]
 
@@ -1184,10 +1187,7 @@ class Query(DataSet):
 
                         subquery_select_clause = SelectClause([field])
                         subquery_from_clause = FromClause(join.dataset)
-                        # TODO: Remove 'where' when able to construct
-                        #       WhereClause with an Expression Class (tbd)
-                        #       instance
-                        subquery_where_clause = WhereClause('where', join.on_clause.expression)
+                        subquery_where_clause = WhereClause(join.on_clause.expression)
                         subquery = Query(
                             select_clause=subquery_select_clause,
                             from_clause=subquery_from_clause,
