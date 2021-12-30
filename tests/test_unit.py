@@ -17,9 +17,9 @@ class StringTestCase(TestCase):
         query = Query(sql_str)
 
         expected_query = Query(
-            expected_select_clause,
-            expected_from_clause,
-            expected_where_clause)
+            select_clause=expected_select_clause,
+            from_clause=expected_from_clause,
+            where_clause=expected_where_clause)
 
         self.assertEqual(query, expected_query)
         self.assertEqual(query.select_clause, expected_select_clause)
@@ -122,9 +122,9 @@ class StringListTestCase(TestCase):
         query = Query(sql_str)
 
         expected_query = Query(
-            expected_select_clause,
-            expected_from_clause,
-            expected_where_clause)
+            select_clause=expected_select_clause,
+            from_clause=expected_from_clause,
+            where_clause=expected_where_clause)
 
         self.assertEqual(query, expected_query)
         self.assertEqual(query.select_clause, expected_select_clause)

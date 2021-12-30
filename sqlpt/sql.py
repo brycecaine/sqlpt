@@ -935,31 +935,6 @@ class Query(DataSet):
                 group_by_clause = None
                 having_clause = None
 
-            elif type(args[0]) == list:
-                s_str = ''
-                # TODO: Accommodate for missing from_clause and where_clause
-                select_clause = args[0][0]
-                from_clause = args[0][1]
-                where_clause = args[0][2]
-                group_by_clause = None
-                having_clause = None
-
-        elif len(args) == 2:
-            s_str = ''
-            select_clause = args[0]
-            from_clause = args[1]
-            where_clause = None
-            group_by_clause = None
-            having_clause = None
-
-        elif len(args) == 3:
-            s_str = ''
-            select_clause = args[0]
-            from_clause = args[1]
-            where_clause = args[2]
-            group_by_clause = None
-            having_clause = None
-
         else:
             s_str = ''
             select_clause = kwargs.get('select_clause')
@@ -1186,8 +1161,9 @@ class Query(DataSet):
                         #       instance
                         subquery_where_clause = WhereClause('where', join.on_clause.expression)
                         subquery = Query(
-                            subquery_select_clause, subquery_from_clause,
-                            subquery_where_clause)
+                            select_clause=subquery_select_clause,
+                            from_clause=subquery_from_clause,
+                            where_clause=subquery_where_clause)
 
                         alias = field.alias or field.expression
                         subquery_field = Field(subquery, alias)
@@ -1200,7 +1176,9 @@ class Query(DataSet):
             self.from_clause.remove_join(join_to_remove)
 
         scalarized_query = Query(
-            self.select_clause, self.from_clause, self.where_clause)
+            select_clause=self.select_clause,
+            from_clause=self.from_clause,
+            where_clause=self.where_clause)
 
         return scalarized_query
 
@@ -1478,7 +1456,10 @@ class UpdateStatement:
         from_clause = FromClause(f'from {self.update_clause.dataset}')
         where_clause = self.where_clause
 
-        query = Query(select_clause, from_clause, where_clause)
+        query = Query(
+            select_clause=select_clause,
+            from_clause=from_clause,
+            where_clause=where_clause)
 
         return query.count()
 
@@ -1558,6 +1539,9 @@ class DeleteStatement:
         from_clause = self.from_clause
         where_clause = self.where_clause
 
-        query = Query(select_clause, from_clause, where_clause)
+        query = Query(
+            select_clause=select_clause,
+            from_clause=from_clause,
+            where_clause=where_clause)
 
         return query.count()
