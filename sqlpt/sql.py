@@ -22,20 +22,6 @@ class QueryResult(list):
         return len(self)
 
 
-def get_dataset(token):
-    """ docstring tbd """
-    dataset = None
-
-    if type(token) == Parenthesis:
-        sql_str = str(token)[1:-1]
-        dataset = Query(sql_str)
-
-    else:
-        dataset = Table(str(token))
-
-    return dataset
-
-
 @dataclass
 class DataSet:
     """ docstring tbd """
@@ -97,74 +83,6 @@ class Table(DataSet):
         return equivalent
 
 
-def parse_select_clause(sql_str):
-    """ docstring tbd """
-    sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
-
-    token_list = []
-
-    if str(sql_tokens[0]).lower() == 'select':
-        for sql_token in sql_tokens:
-            if type(sql_token) == Token:
-                if sql_token.value.lower() == 'from':
-                    break
-
-            elif type(sql_token) == Where:
-                break
-
-            token_list.append(sql_token)
-
-    return token_list
-
-
-def parse_field(s_str, return_type='dict'):
-    regex = (
-        r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')  # noqa
-    pattern = re.compile(regex)
-    match_obj = re.match(pattern, s_str)
-
-    expression = match_obj.group('expression')
-    alias = match_obj.group('alias')
-    query = Query(expression)
-
-    if return_type == 'dict':
-        return_val = {'expression': expression, 'alias': alias, 'query': query}
-
-    elif return_type == 'tuple':
-        return_val = (expression, alias, query)
-
-    return return_val
-
-
-def parse_fields(s_str):
-    """ docstring tbd """
-    sql_str = f'select {s_str}' if s_str[:6] != 'select' else f'{s_str}'
-
-    token_list = parse_select_clause(sql_str)
-    fields = parse_fields_from_token_list(token_list)
-
-    return fields
-
-
-def parse_fields_from_token_list(field_token_list):
-    """ docstring tbd """
-    fields = []
-
-    # FUTURE: Chain the "remove" functionality
-    for identifier in remove_whitespace(field_token_list, (';', ',')):
-
-        if str(identifier).lower() != 'select':
-            if type(identifier) == IdentifierList:
-                for inner_identifier in remove_whitespace(identifier, (',')):
-                    field_dict = parse_field(str(inner_identifier))
-                    fields.append(Field(**field_dict))
-            else:
-                field_dict = parse_field(str(identifier))
-                fields.append(Field(**field_dict))
-
-    return fields
-
-
 @dataclass
 class SelectClause:
     """ docstring tbd """
@@ -174,8 +92,7 @@ class SelectClause:
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
-                token_list = parse_select_clause(sql_str)
-                fields = parse_fields_from_token_list(token_list)
+                fields = parse_select_clause(sql_str)
 
             elif type(args[0]) == list:
                 if args[0]:
@@ -194,8 +111,7 @@ class SelectClause:
 
                         sql_str = ', '.join(field_strs)
                         sql_str = f'select {sql_str}'
-                        token_list = parse_select_clause(sql_str)
-                        fields = parse_fields_from_token_list(token_list)
+                        fields = parse_select_clause(sql_str)
                 else:
                     fields = []
 
@@ -274,25 +190,6 @@ class SelectClause:
         """ docstring tbd """
 
 
-def get_expression_clause_parts(token_list):
-    expression = ''
-
-    for sql_token in token_list:
-        trimmed_sql_token = ' '.join(str(sql_token).split())
-        expression += f'{trimmed_sql_token} '
-
-    expression = expression[:-1]
-
-    full_expression_words = expression.split(' ')
-
-    if full_expression_words[0] in ('on', 'where', 'having', 'set'):
-        full_expression_words.pop(0)
-
-    expression = Expression(' '.join(full_expression_words))
-
-    return expression
-
-
 @dataclass
 class Expression:
     comparisons: list
@@ -351,13 +248,13 @@ class ExpressionClause:
                 expression_clause_token_list = (
                     self.parse_expression_clause(sql_str))
 
-                expression = get_expression_clause_parts(
+                expression = self.__class__.get_expression_clause_parts(
                     expression_clause_token_list)
 
             elif type(args[0]) == list:
                 expression_clause_token_list = args[0]
 
-                expression = get_expression_clause_parts(
+                expression = self.__class__.get_expression_clause_parts(
                     expression_clause_token_list)
 
         else:
@@ -390,18 +287,25 @@ class ExpressionClause:
 
         return equivalent
 
+    @staticmethod
+    def get_expression_clause_parts(token_list):
+        """ docstring tbd """
+        expression = ''
 
-def parse_on_clause(sql_str):
-    """ docstring tbd """
-    sql_tokens = (
-        remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+        for sql_token in token_list:
+            trimmed_sql_token = ' '.join(str(sql_token).split())
+            expression += f'{trimmed_sql_token} '
 
-    on_clause_token_list = []
+        expression = expression[:-1]
 
-    for sql_token in sql_tokens:
-        on_clause_token_list.append(sql_token)
+        full_expression_words = expression.split(' ')
 
-    return on_clause_token_list
+        if full_expression_words[0] in ('on', 'where', 'having', 'set'):
+            full_expression_words.pop(0)
+
+        expression = Expression(' '.join(full_expression_words))
+
+        return expression
 
 
 class OnClause(ExpressionClause):
@@ -411,9 +315,22 @@ class OnClause(ExpressionClause):
 
         self.leading_word = 'on'
 
+    @staticmethod
+    def parse_on_clause(sql_str):
+        """ docstring tbd """
+        sql_tokens = (
+            remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+
+        on_clause_token_list = []
+
+        for sql_token in sql_tokens:
+            on_clause_token_list.append(sql_token)
+
+        return on_clause_token_list
+
     def parse_expression_clause(self, sql_str):
         """ docstring tbd """
-        token_list = parse_on_clause(sql_str)
+        token_list = self.__class__.parse_on_clause(sql_str)
 
         return token_list
 
@@ -764,29 +681,6 @@ class Comparison:
         return equivalent
 
 
-def parse_where_clause(sql_str):
-    """ docstring tbd """
-    sql_tokens = (
-        remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
-
-    where_clause_token_list = []
-
-    start_appending = False
-
-    for sql_token in sql_tokens:
-        if type(sql_token) == Token:
-            if sql_token.value.lower() == 'from':
-                continue
-
-        elif type(sql_token) == Where:
-            start_appending = True
-
-        if start_appending:
-            where_clause_token_list.append(sql_token)
-
-    return where_clause_token_list
-
-
 class WhereClause(ExpressionClause):
     """ docstring tbd """
     def __init__(self, *args, **kwargs):
@@ -794,9 +688,32 @@ class WhereClause(ExpressionClause):
 
         self.leading_word = 'where'
 
+    @staticmethod
+    def parse_where_clause(sql_str):
+        """ docstring tbd """
+        sql_tokens = (
+            remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+
+        where_clause_token_list = []
+
+        start_appending = False
+
+        for sql_token in sql_tokens:
+            if type(sql_token) == Token:
+                if sql_token.value.lower() == 'from':
+                    continue
+
+            elif type(sql_token) == Where:
+                start_appending = True
+
+            if start_appending:
+                where_clause_token_list.append(sql_token)
+
+        return where_clause_token_list
+
     def parse_expression_clause(self, sql_str):
         """ docstring tbd """
-        token_list = parse_where_clause(sql_str)
+        token_list = self.__class__.parse_where_clause(sql_str)
 
         return token_list
 
@@ -840,19 +757,6 @@ class GroupByClause:
         return string
 
 
-def parse_having_clause(sql_str):
-    """ docstring tbd """
-    sql_tokens = (
-        remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
-
-    having_clause_token_list = []
-
-    for sql_token in sql_tokens:
-        having_clause_token_list.append(sql_token)
-
-    return having_clause_token_list
-
-
 class HavingClause(ExpressionClause):
     """ docstring tbd """
     def __init__(self, *args, **kwargs):
@@ -860,57 +764,24 @@ class HavingClause(ExpressionClause):
 
         self.leading_word = 'having'
 
+    @staticmethod
+    def parse_having_clause(sql_str):
+        """ docstring tbd """
+        sql_tokens = (
+            remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+
+        having_clause_token_list = []
+
+        for sql_token in sql_tokens:
+            having_clause_token_list.append(sql_token)
+
+        return having_clause_token_list
+
     def parse_expression_clause(self, sql_str):
         """ docstring tbd """
-        token_list = parse_having_clause(sql_str)
+        token_list = self.__class__.parse_having_clause(sql_str)
 
         return token_list
-
-
-def delete_node(query, coordinates):
-    """ docstring tbd """
-    node = query
-
-    for coordinate in coordinates:
-        for component in coordinate:
-            if type(component) == str:
-                node = getattr(node, component)
-
-            else:
-                # Delete the nth node, not just the part of the node, which
-                # would break the query (hence the `break`)
-                node.pop(component)
-                break
-
-    return query
-
-
-def parameterize_node(query, coordinates):
-    """ docstring tbd """
-    node = query
-    leaf_node = None
-
-    for coordinate in coordinates:
-        for component in coordinate:
-            if type(component) == str:
-                node = getattr(node, component)
-
-            else:
-                node = node[component]
-                leaf_node = node
-
-    # Assuming (I know...) that leaf_node is an instance of Comparison
-    # To parameterize a comparison, use a standard approach where the bind
-    # parameter is the right_term, so if the invalid column is the left_term,
-    # swap them first and then give the right_term a standard bind-parameter
-    # name of :[left_term] (replacing . with _)
-    if leaf_node:
-        if component == 'left_term':
-            leaf_node.left_term = leaf_node.right_term
-
-        leaf_node.right_term = f":{leaf_node.left_term.replace('.', '_')}"
-
-    return query
 
 
 @dataclass
@@ -975,7 +846,6 @@ class Query(DataSet):
             return True
 
         return False
-
 
     def __str__(self):
         string = str(self.select_clause)
@@ -1042,9 +912,20 @@ class Query(DataSet):
 
     def delete_node(self, coordinates):
         """ docstring tbd """
-        remaining_query = delete_node(self, coordinates)
+        node = self
 
-        return remaining_query
+        for coordinate in coordinates:
+            for component in coordinate:
+                if type(component) == str:
+                    node = getattr(node, component)
+
+                else:
+                    # Delete the nth node, not just the part of the node, which
+                    # would break the query (hence the `break`)
+                    node.pop(component)
+                    break
+
+        return self
 
     def locate_invalid_columns(self):
         """ docstring tbd """
@@ -1072,9 +953,30 @@ class Query(DataSet):
 
     def parameterize_node(self, coordinates):
         """ docstring tbd """
-        parameterized_query = parameterize_node(self, coordinates)
+        node = self
+        leaf_node = None
 
-        return parameterized_query
+        for coordinate in coordinates:
+            for component in coordinate:
+                if type(component) == str:
+                    node = getattr(node, component)
+
+                else:
+                    node = node[component]
+                    leaf_node = node
+
+        # Assuming (I know...) that leaf_node is an instance of Comparison
+        # To parameterize a comparison, use a standard approach where the bind
+        # parameter is the right_term, so if the invalid column is the left_term,
+        # swap them first and then give the right_term a standard bind-parameter
+        # name of :[left_term] (replacing . with _)
+        if leaf_node:
+            if component == 'left_term':
+                leaf_node.left_term = leaf_node.right_term
+
+            leaf_node.right_term = f":{leaf_node.left_term.replace('.', '_')}"
+
+        return self
 
     def parameterize(self):
         """ docstring tbd """
@@ -1321,19 +1223,6 @@ class UpdateClause:
         return update_clause_str
 
 
-def parse_set_clause(sql_str):
-    """ docstring tbd """
-    sql_tokens = (
-        remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
-
-    set_clause_token_list = []
-
-    for sql_token in sql_tokens:
-        set_clause_token_list.append(sql_token)
-
-    return set_clause_token_list
-
-
 @dataclass
 class SetClause(ExpressionClause):
     def __init__(self, *args, **kwargs):
@@ -1341,9 +1230,22 @@ class SetClause(ExpressionClause):
 
         self.leading_word = 'set'
 
+    @staticmethod
+    def parse_set_clause(sql_str):
+        """ docstring tbd """
+        sql_tokens = (
+            remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+
+        set_clause_token_list = []
+
+        for sql_token in sql_tokens:
+            set_clause_token_list.append(sql_token)
+
+        return set_clause_token_list
+
     def parse_expression_clause(self, sql_str):
         """ docstring tbd """
-        token_list = parse_set_clause(sql_str)
+        token_list = self.__class__.parse_set_clause(sql_str)
 
         return token_list
 
@@ -1460,3 +1362,86 @@ class DeleteStatement:
             where_clause=where_clause)
 
         return query.count()
+
+
+def get_dataset(token):
+    """ docstring tbd """
+    dataset = None
+
+    if type(token) == Parenthesis:
+        sql_str = str(token)[1:-1]
+        dataset = Query(sql_str)
+
+    else:
+        dataset = Table(str(token))
+
+    return dataset
+
+
+def parse_select_clause(sql_str):
+    """ docstring tbd """
+    sql_tokens = remove_whitespace(sqlparse.parse(sql_str)[0].tokens)
+
+    token_list = []
+
+    if str(sql_tokens[0]).lower() == 'select':
+        for sql_token in sql_tokens:
+            if type(sql_token) == Token:
+                if sql_token.value.lower() == 'from':
+                    break
+
+            elif type(sql_token) == Where:
+                break
+
+            token_list.append(sql_token)
+
+    fields = parse_fields_from_token_list(token_list)
+
+    return fields
+
+
+def parse_field(s_str, return_type='dict'):
+    regex = (
+        r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')  # noqa
+    pattern = re.compile(regex)
+    match_obj = re.match(pattern, s_str)
+
+    expression = match_obj.group('expression')
+    alias = match_obj.group('alias')
+    query = Query(expression)
+
+    if return_type == 'dict':
+        return_val = {'expression': expression, 'alias': alias, 'query': query}
+
+    elif return_type == 'tuple':
+        return_val = (expression, alias, query)
+
+    return return_val
+
+
+def parse_fields(s_str):
+    """ docstring tbd """
+    sql_str = f'select {s_str}' if s_str[:6] != 'select' else f'{s_str}'
+
+    fields = parse_select_clause(sql_str)
+
+    return fields
+
+
+def parse_fields_from_token_list(field_token_list):
+    """ docstring tbd """
+    fields = []
+
+    # FUTURE: Chain the "remove" functionality
+    for identifier in remove_whitespace(field_token_list, (';', ',')):
+
+        if str(identifier).lower() != 'select':
+            if type(identifier) == IdentifierList:
+                for inner_identifier in remove_whitespace(identifier, (',')):
+                    field_dict = parse_field(str(inner_identifier))
+                    fields.append(Field(**field_dict))
+            else:
+                field_dict = parse_field(str(identifier))
+                fields.append(Field(**field_dict))
+
+    return fields
