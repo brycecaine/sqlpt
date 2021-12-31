@@ -5,8 +5,8 @@ from unittest import TestCase
 from sqlpt import service
 from sqlpt.sql import (
     Comparison, DeleteClause, DeleteStatement, Expression, Field, FromClause,
-    Join, OnClause, Query, SelectClause, SetClause, Table,
-    UpdateClause, UpdateStatement, WhereClause, parse_fields)
+    Join, OnClause, Query, SelectClause, SetClause, Table, UpdateClause,
+    UpdateStatement, WhereClause, parse_fields)
 
 
 class StringTestCase(TestCase):

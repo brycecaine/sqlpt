@@ -12,8 +12,8 @@ from sqlparse.sql import Comparison as SqlParseComparison
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
 from sqlpt.service import (
-    get_join_kind,
-    get_truth_table_result, is_equivalent, is_join, remove_whitespace)
+    get_join_kind, get_truth_table_result, is_equivalent, is_join,
+    remove_whitespace)
 
 
 class QueryResult(list):
