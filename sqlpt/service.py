@@ -49,48 +49,6 @@ def get_function_from_statement(statement):
     return function_str
 
 
-def get_field_expression(field_str):
-    """ docstring tbd """
-    field_expression = ''
-
-    if field_str not in (',', ' ', '\n'):
-        function_str = get_function_from_statement(field_str)
-
-        if function_str:
-            field_expression = function_str
-
-        else:
-            field_statement_elements = field_str.rsplit(' ', 1)
-            field_expression = field_statement_elements[0]
-
-    return field_expression
-
-
-def get_field_alias(field_str):
-    """ docstring tbd """
-    field_alias = ''
-
-    if field_str not in (',', ' ', '\n'):
-        function_str = get_function_from_statement(field_str)
-
-        if function_str:
-            field_alias = (field_str.replace(function_str, '')
-                                    .replace(' as ', '')
-                                    .replace(' AS ', '')
-                                    .replace(' ', ''))
-
-        else:
-            field_statement_elements = field_str.rsplit(' ', 1)
-
-            if len(field_statement_elements) > 1:
-                field_alias = field_statement_elements[1]
-
-            else:
-                field_alias = ''
-
-    return field_alias
-
-
 def is_select(item):
     """ docstring tbd """
     item_is_select = False

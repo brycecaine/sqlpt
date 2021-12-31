@@ -12,38 +12,8 @@ from sqlparse.sql import Comparison as SqlParseComparison
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
 from sqlpt.service import (
-    get_field_alias, get_field_expression, get_join_kind,
+    get_join_kind,
     get_truth_table_result, is_equivalent, is_join, remove_whitespace)
-
-
-class SqlStr(str):
-    """ docstring tbd """
-    def parse_fields(self):
-        """ docstring tbd """
-        sql_str = f'select {self}' if self[:6] != 'select' else self
-
-        token_list = parse_select_clause(sql_str)
-        fields = parse_fields_from_token_list(token_list)
-
-        return fields
-
-    def parse_field(self):
-        """ docstring tbd """
-        regex = r'(\w*)?(\(.*\))?[ ]*(\w*)'
-        match_obj = re.match(regex, self, re.M | re.I)
-
-        expression_part_1 = match_obj.group(1)
-        expression_part_2 = match_obj.group(2)
-
-        if expression_part_2:
-            expression = f'{expression_part_1}{expression_part_2}'
-        else:
-            expression = expression_part_1
-
-        alias = match_obj.group(3)
-        field = Field(expression=expression, alias=alias)
-
-        return field
 
 
 class QueryResult(list):
@@ -147,47 +117,50 @@ def parse_select_clause(sql_str):
     return token_list
 
 
-def parse_fields_from_token_list(field_token_list):
-    """ docstring tbd """
+def parse_field(s_str, return_type='dict'):
     regex = (
         r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')  # noqa
-
-    # old version
-    # r'(?P<expression>\w+(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')
-
     pattern = re.compile(regex)
+    match_obj = re.match(pattern, s_str)
 
-    fields = []
+    expression = match_obj.group('expression')
+    alias = match_obj.group('alias')
+    query = Query(expression)
 
-    # FUTURE: Chain the "remove" functionality
-    for identifier in remove_whitespace(field_token_list, (';', ',')):
-        match_obj = re.match(pattern, str(identifier))
-        expression = match_obj.group('expression')
-        alias = match_obj.group('alias')
+    if return_type == 'dict':
+        return_val = {'expression': expression, 'alias': alias, 'query': query}
 
-        field = Field(expression=expression, alias=alias)
-        fields.append(field)
+    elif return_type == 'tuple':
+        return_val = (expression, alias, query)
+
+    return return_val
+
+
+def parse_fields(s_str):
+    """ docstring tbd """
+    sql_str = f'select {s_str}' if s_str[:6] != 'select' else f'{s_str}'
+
+    token_list = parse_select_clause(sql_str)
+    fields = parse_fields_from_token_list(token_list)
 
     return fields
 
 
-def convert_token_list_to_fields(token_list):
+def parse_fields_from_token_list(field_token_list):
     """ docstring tbd """
-    # Remove "select" token
     fields = []
 
-    if token_list:
-        if str(token_list[0]) == 'select':
-            token_list.pop(0)
+    # FUTURE: Chain the "remove" functionality
+    for identifier in remove_whitespace(field_token_list, (';', ',')):
 
-        if type(token_list[0]) == list:
-            field_token_list = token_list[0]
-        elif type(token_list[0]) == IdentifierList:
-            field_token_list = token_list[0]
-        else:
-            field_token_list = [token_list[0]]
-
-        fields = parse_fields_from_token_list(field_token_list)
+        if str(identifier).lower() != 'select':
+            if type(identifier) == IdentifierList:
+                for inner_identifier in remove_whitespace(identifier, (',')):
+                    field_dict = parse_field(str(inner_identifier))
+                    fields.append(Field(**field_dict))
+            else:
+                field_dict = parse_field(str(identifier))
+                fields.append(Field(**field_dict))
 
     return fields
 
@@ -202,13 +175,13 @@ class SelectClause:
             if type(args[0]) == str:
                 sql_str = args[0]
                 token_list = parse_select_clause(sql_str)
-                fields = convert_token_list_to_fields(token_list)
+                fields = parse_fields_from_token_list(token_list)
 
             elif type(args[0]) == list:
                 if args[0]:
                     if type(args[0][0]) == Token:
                         token_list = args[0]
-                        fields = convert_token_list_to_fields(token_list)
+                        fields = parse_fields_from_token_list(token_list)
 
                     elif type(args[0][0]) == Field:
                         fields = args[0]
@@ -222,7 +195,7 @@ class SelectClause:
                         sql_str = ', '.join(field_strs)
                         sql_str = f'select {sql_str}'
                         token_list = parse_select_clause(sql_str)
-                        fields = convert_token_list_to_fields(token_list)
+                        fields = parse_fields_from_token_list(token_list)
                 else:
                     fields = []
 
@@ -943,7 +916,7 @@ def parameterize_node(query, coordinates):
 @dataclass
 class Query(DataSet):
     """ docstring tbd """
-    sql_str: SqlStr = dataclass_field(repr=False)
+    sql_str: str = dataclass_field(repr=False)
     select_clause: SelectClause
     from_clause: FromClause
     where_clause: WhereClause
@@ -954,6 +927,10 @@ class Query(DataSet):
         if len(args) == 1:
             if type(args[0]) == str:
                 s_str = args[0]
+
+                # Accommodate subqueries surrounded by parens
+                s_str = s_str[1:-1] if s_str[:7] == '(select' else s_str
+
                 select_clause = SelectClause(s_str) or None
                 from_clause = FromClause(s_str) or None
                 where_clause = WhereClause(s_str) or None
@@ -968,7 +945,7 @@ class Query(DataSet):
             group_by_clause = kwargs.get('group_by_clause')
             having_clause = kwargs.get('having_clause')
 
-        self.sql_str = SqlStr(s_str)
+        self.sql_str = s_str
         self.select_clause = select_clause
         self.from_clause = from_clause
         self.where_clause = where_clause
@@ -1274,13 +1251,6 @@ class Query(DataSet):
         self.where_clause.add_comparison(comparison)
 
 
-def get_query_from_subquery_str(s_str):
-    """ docstring tbd """
-    query = Query(s_str[1:-1]) if s_str[:7] == '(select' else None
-
-    return query
-
-
 @dataclass
 class Field:
     """ docstring tbd """
@@ -1292,16 +1262,14 @@ class Field:
         if len(args) == 1:
             if type(args[0]) == str:
                 field_str = args[0]
-                expression = get_field_expression(field_str)
-                alias = get_field_alias(field_str)
-                query = get_query_from_subquery_str(expression)
+                expression, alias, query = parse_field(field_str, 'tuple')
 
         else:
             expression = kwargs.get('expression')
             alias = kwargs.get('alias')
 
             if expression:
-                query = kwargs.get('query', get_query_from_subquery_str(expression))
+                query = kwargs.get('query', Query(expression))
             else:
                 query = None
 
@@ -1383,7 +1351,7 @@ class SetClause(ExpressionClause):
 @dataclass
 class UpdateStatement:
     """ docstring tbd """
-    sql_str: SqlStr = dataclass_field(repr=False)
+    sql_str: str = dataclass_field(repr=False)
     update_clause: UpdateClause
     set_clause: SetClause
     where_clause: WhereClause
@@ -1402,7 +1370,7 @@ class UpdateStatement:
             set_clause = kwargs.get('set_clause')
             where_clause = kwargs.get('where_clause')
 
-        self.sql_str = SqlStr(s_str)
+        self.sql_str = s_str
         self.update_clause = update_clause
         self.set_clause = set_clause
         self.where_clause = where_clause
@@ -1446,7 +1414,7 @@ class DeleteClause:
 @dataclass
 class DeleteStatement:
     """ docstring tbd """
-    sql_str: SqlStr = dataclass_field(repr=False)
+    sql_str: str = dataclass_field(repr=False)
     delete_clause: DeleteClause
     from_clause: FromClause
     where_clause: WhereClause
@@ -1465,7 +1433,7 @@ class DeleteStatement:
             from_clause = kwargs.get('from_clause')
             where_clause = kwargs.get('where_clause')
 
-        self.sql_str = SqlStr(s_str)
+        self.sql_str = s_str
         self.delete_clause = delete_clause
         self.from_clause = from_clause
         self.where_clause = where_clause
