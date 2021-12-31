@@ -192,6 +192,7 @@ class SelectClause:
 
 @dataclass
 class Expression:
+    """ docstring tbd """
     comparisons: list
 
     def __init__(self, *args, **kwargs):
@@ -202,7 +203,8 @@ class Expression:
                 if args[0]:
                     statement = sqlparse.parse(args[0])
 
-                    expression_tokens = (remove_whitespace(statement[0].tokens))
+                    expression_tokens = (
+                        remove_whitespace(statement[0].tokens))
                     comparison_token_list = []
                     comparison_token_lists = []
 
@@ -212,7 +214,8 @@ class Expression:
 
                         elif type(token) == SqlParseComparison:
                             comparison_token_list.append(token)
-                            comparison_token_lists.append(comparison_token_list)  # deepcopy?
+                            comparison_token_lists.append(
+                                comparison_token_list)  # deepcopy?
                             comparison_token_list = []
 
                     for comparison_token_list in comparison_token_lists:
@@ -398,7 +401,8 @@ class FromClause:
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
-                from_clause_token_list = self._parse_from_clause_from_str(sql_str)
+                from_clause_token_list = (
+                    self._parse_from_clause_from_str(sql_str))
 
                 from_dataset, joins = self._parse_from_clause_from_tokens(
                     from_clause_token_list)
@@ -563,11 +567,20 @@ class FromClause:
         locations = []
 
         for i, join in enumerate(self.joins):
-            for j, comparison in enumerate(join.on_clause.expression.comparisons):
+            enumerated_comparisons = enumerate(
+                join.on_clause.expression.comparisons)
+
+            for j, comparison in enumerated_comparisons:
                 if s_str in comparison.left_term:
-                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j, 'left_term'))
+                    location_tuple = (
+                        'from_clause', 'joins', i, 'on_clause', 'expression',
+                        'comparisons', j, 'left_term')
+                    locations.append(location_tuple)
                 elif s_str in comparison.right_term:
-                    locations.append(('from_clause', 'joins', i, 'on_clause', 'expression', 'comparisons', j, 'right_term'))
+                    location_tuple = (
+                        'from_clause', 'joins', i, 'on_clause', 'expression',
+                        'comparisons', j, 'right_term')
+                    locations.append(location_tuple)
 
         return locations
 
@@ -618,7 +631,7 @@ class Comparison:
 
             if elements[0] in ('and', 'or'):
                 bool_conjunction = elements.pop(0)
-            elif elements[0] in ('not'):
+            elif elements[0] == 'not':
                 bool_sign = elements.pop(0)
             else:
                 bool_conjunction = ''
@@ -723,14 +736,19 @@ class WhereClause(ExpressionClause):
 
         for i, comparison in enumerate(self.expression.comparisons):
             if s_str in comparison.left_term:
-                locations.append(('where_clause', 'expression', 'comparisons', i, 'left_term'))
+                location_tuple = ('where_clause', 'expression', 'comparisons',
+                                  i, 'left_term')
+                locations.append(location_tuple)
             elif s_str in comparison.right_term:
-                locations.append(('where_clause', 'expression', 'comparisons', i, 'right_term'))
+                location_tuple = ('where_clause', 'expression', 'comparisons',
+                                  i, 'right_term')
+                locations.append(location_tuple)
 
         return locations
 
 
 class GroupByClause:
+    """ docstring tbd """
     field_names: list
 
     def __init__(self, *args, **kwargs):
@@ -967,9 +985,9 @@ class Query(DataSet):
 
         # Assuming (I know...) that leaf_node is an instance of Comparison
         # To parameterize a comparison, use a standard approach where the bind
-        # parameter is the right_term, so if the invalid column is the left_term,
-        # swap them first and then give the right_term a standard bind-parameter
-        # name of :[left_term] (replacing . with _)
+        # parameter is the right_term, so if the invalid column is the
+        # left_term, swap them first and then give the right_term a standard
+        # bind-parameter name of :[left_term] (replacing . with _)
         if leaf_node:
             if component == 'left_term':
                 leaf_node.left_term = leaf_node.right_term
@@ -1020,6 +1038,7 @@ class Query(DataSet):
         return counts_dict
 
     def rows_exist(self, **kwargs):
+        """ docstring tbd """
         row_count = self.count(**kwargs)
 
         rows_exist_bool = True if row_count != 0 else False
@@ -1041,8 +1060,10 @@ class Query(DataSet):
                         self.select_clause.remove_field(field)
 
                         subquery_select_clause = SelectClause([field])
-                        subquery_from_clause = FromClause(from_dataset=join.dataset)
-                        subquery_where_clause = WhereClause(expression=join.on_clause.expression)
+                        subquery_from_clause = FromClause(
+                            from_dataset=join.dataset)
+                        subquery_where_clause = WhereClause(
+                            expression=join.on_clause.expression)
                         subquery = Query(
                             select_clause=subquery_select_clause,
                             from_clause=subquery_from_clause,
@@ -1050,11 +1071,12 @@ class Query(DataSet):
 
                         alias = field.alias or field.expression
                         expression = f'({str(subquery)})'
-                        subquery_field = Field(expression=expression, alias=alias, query=subquery)
+                        subquery_field = Field(
+                            expression=expression, alias=alias, query=subquery)
                         self.select_clause.add_field(subquery_field)
 
                         joins_to_remove.append(join)
-        
+
         for join_to_remove in joins_to_remove:
             self.from_clause.remove_join(join_to_remove)
 
@@ -1148,7 +1170,8 @@ class Query(DataSet):
             value = ','.join(f"{item}" for item in value if item)
             value = f'({value})'
 
-        comparison = Comparison(left_term=subquery_str, operator=operator, right_term=value)
+        comparison = Comparison(
+            left_term=subquery_str, operator=operator, right_term=value)
 
         self.where_clause.add_comparison(comparison)
 
@@ -1191,6 +1214,7 @@ class Field:
 
 @dataclass
 class UpdateClause:
+    """ docstring tbd """
     dataset: DataSet
 
     def __init__(self, *args, **kwargs):
@@ -1225,6 +1249,7 @@ class UpdateClause:
 
 @dataclass
 class SetClause(ExpressionClause):
+    """ docstring tbd """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -1307,11 +1332,12 @@ class DeleteClause:
     """ docstring tbd """
     leading_word: str
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self.leading_word = 'delete'
 
     def __str__(self):
         return self.leading_word
+
 
 @dataclass
 class DeleteStatement:
@@ -1325,7 +1351,7 @@ class DeleteStatement:
         if len(args) == 1:
             if type(args[0]) == str:
                 s_str = args[0]
-                delete_clause = DeleteClause(s_str) or None
+                delete_clause = DeleteClause() or None
                 from_clause = FromClause(s_str) or None
                 where_clause = WhereClause(s_str) or None
 
@@ -1352,6 +1378,7 @@ class DeleteStatement:
         return string
 
     def count(self):
+        """ docstring tbd """
         select_clause = SelectClause('select *')
         from_clause = self.from_clause
         where_clause = self.where_clause
@@ -1401,6 +1428,7 @@ def parse_select_clause(sql_str):
 
 
 def parse_field(s_str, return_type='dict'):
+    """ docstring tbd """
     regex = (
         r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')  # noqa
     pattern = re.compile(regex)

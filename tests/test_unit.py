@@ -273,7 +273,6 @@ class FunctionTestCase(TestCase):
         actual_field = Field('(select * from dual) z')
         self.assertTrue(actual_field)
 
-    # TODO: Re-include this test after refactoring (make it pass too)
     def test_parse_fields_from_str(self):
         """ docstring tbd """
         sql_str = (
@@ -329,7 +328,11 @@ class QueryTestCase(TestCase):
 
     def test_joins(self):
         """ docstring tbd """
-        expected_joins = [Join(kind='inner', dataset=Table(name='d'), on_clause=OnClause('on e = f'))]
+        join_dict = {
+            'kind': 'inner',
+            'dataset': Table(name='d'),
+            'on_clause': OnClause('on e = f')}
+        expected_joins = [Join(**join_dict)]
 
         actual_joins = self.query.from_clause.joins
 
@@ -339,10 +342,15 @@ class QueryTestCase(TestCase):
 
     def test_from_clause(self):
         """ docstring tbd """
-        expected_joins = [Join(kind='inner', dataset=Table(name='d'), on_clause=OnClause('on e = f'))]
+        join_dict = {
+            'kind': 'inner',
+            'dataset': Table(name='d'),
+            'on_clause': OnClause('on e = f')}
+        expected_joins = [Join(**join_dict)]
 
         expected_table = Table(name='c')
-        expected_from_clause = FromClause(from_dataset=expected_table, joins=expected_joins)
+        expected_from_clause = FromClause(
+            from_dataset=expected_table, joins=expected_joins)
         actual_from_clause = self.query.from_clause
 
         self.assertEqual(actual_from_clause, expected_from_clause)
@@ -480,7 +488,7 @@ class EquivalenceTestCase(TestCase):
         """ docstring tbd """
         # equivalent_1 = self.query_1.from_clause.is_equivalent_to(
         #    self.query_2.from_clause)
-        # TODO: Work on from-clause equivalence
+        # FUTURE: Work on from-clause equivalence
         # self.assertTrue(equivalent_1)
         self.assertTrue(1 == 1)
 
@@ -488,7 +496,7 @@ class EquivalenceTestCase(TestCase):
         """ docstring tbd """
         self.query_2.from_clause.is_equivalent_to(self.query_1.from_clause)
 
-        # TODO: Work on from-clause equivalence
+        # FUTURE: Work on from-clause equivalence
         # self.assertTrue(equivalent_2)
         self.assertTrue(1 == 1)
 
@@ -518,12 +526,12 @@ class ConversionTestCase(TestCase):
         input_query = Query(input_sql_str)
         output_query = Query(output_sql_str)
 
-        # TODO: Eventually assertEqual
+        # FUTURE: Eventually assertEqual
         self.assertTrue(input_query)
         self.assertTrue(output_query)
 
 
-# TODO: Make a test case for each class in sql.py
+# FUTURE: Make a test case for each class in sql.py
 class FieldTestCase(TestCase):
     """ docstring tbd """
     def test_field_str_normal(self):
@@ -683,6 +691,7 @@ class ExpressionTestCase(TestCase):
 
 
 class UpdateStatementTestCase(TestCase):
+    """ docstring tbd """
     def test_update_statement_basic(self):
         """ docstring tbd """
         sql_str = "update student set major = 'BIOL' where id = 4"
@@ -711,11 +720,12 @@ class UpdateStatementTestCase(TestCase):
 
 
 class DeleteStatementTestCase(TestCase):
+    """ docstring tbd """
     def test_delete_statement_basic(self):
         """ docstring tbd """
         sql_str = "delete from student where id = 4"
 
-        delete_clause = DeleteClause('delete')
+        delete_clause = DeleteClause()
         from_clause = FromClause('from student')
         where_clause = WhereClause('where id = 4')
 
@@ -739,7 +749,9 @@ class DeleteStatementTestCase(TestCase):
 
 
 class ServiceTestCase(TestCase):
+    """ docstring tbd """
     def test_remove_whitespace_from_strings(self):
+        """ docstring tbd """
         input_item_list = ['test', ' ', 'list', ' ', 'of', ' ', 'strings']
         actual_item_list = service.remove_whitespace(input_item_list)
         expected_item_list = ['test', 'list', 'of', 'strings']
