@@ -5,7 +5,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 
-import pandas as pd
 import sqlparse
 from sqlalchemy import create_engine, exc, inspect
 from sqlparse.sql import Comparison as SqlParseComparison
@@ -25,6 +24,7 @@ class QueryResult(list):
 @dataclass
 class DataSet:
     """ docstring tbd """
+    db_conn_str: str
 
     def rows_unique(self, field_names):
         """ docstring tbd """
@@ -52,11 +52,26 @@ class Table(DataSet):
     """ docstring tbd """
     name: str
 
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1:
+            if type(args[0]) == str:
+                sql_str = args[0]
+
+        else:
+            sql_str = kwargs.get('sql_str')
+
+        self.sql_str = sql_str
+
     def __hash__(self):
         return hash(str(self))
 
     def __str__(self):
-        return self.name
+        if hasattr(self, 'name'):
+            string = self.name
+        else:
+            string = ''
+
+        return string
 
     def count(self):
         """ docstring tbd """
@@ -67,8 +82,7 @@ class Table(DataSet):
 
     def get_columns(self):
         """ docstring tbd """
-        engine = create_engine('sqlite:///sqlpt/college.db')
-        insp = inspect(engine)
+        insp = inspect(self.db_conn)
         columns = insp.get_columns(self.name)
 
         return columns
@@ -813,6 +827,12 @@ class Query(DataSet):
     having_clause: HavingClause
 
     def __init__(self, *args, **kwargs):
+        select_clause = None
+        from_clause = None
+        where_clause = None
+        group_by_clause = None
+        having_clause = None
+
         if len(args) == 1:
             if type(args[0]) == str:
                 s_str = args[0]
@@ -826,20 +846,23 @@ class Query(DataSet):
                 group_by_clause = None
                 having_clause = None
 
-        else:
-            s_str = ''
-            select_clause = kwargs.get('select_clause')
-            from_clause = kwargs.get('from_clause')
-            where_clause = kwargs.get('where_clause')
-            group_by_clause = kwargs.get('group_by_clause')
-            having_clause = kwargs.get('having_clause')
+        sql_str = kwargs.get('sql_str', s_str)
+        select_clause = kwargs.get('select_clause', select_clause)
+        from_clause = kwargs.get('from_clause', from_clause)
+        where_clause = kwargs.get('where_clause', where_clause)
+        group_by_clause = kwargs.get('group_by_clause', group_by_clause)
+        having_clause = kwargs.get('having_clause', having_clause)
+        db_conn_str = kwargs.get('db_conn_str', '')
 
-        self.sql_str = s_str
+        self.sql_str = sql_str
         self.select_clause = select_clause
         self.from_clause = from_clause
         self.where_clause = where_clause
         self.group_by_clause = group_by_clause
         self.having_clause = having_clause
+        self.db_conn_str = db_conn_str
+        print('#################')
+        print(self.db_conn_str)
 
     def __hash__(self):
         return hash(str(self))
@@ -849,6 +872,10 @@ class Query(DataSet):
 
         if isinstance(other, Query):
             select_clauses_equal = self.select_clause == other.select_clause
+            print('----------------------')
+            print(self)
+            print(other)
+            print('----------------------')
             from_clauses_equal = self._optional_clause_equal(other, 'from')
             where_clauses_equal = self._optional_clause_equal(other, 'where')
 
@@ -907,17 +934,17 @@ class Query(DataSet):
 
     @property
     def db_conn(self):
+        print('@@@@@@@@@@@@@@@@@@@@@@@@@')
+        print(self)
+        print(self.db_conn_str)
         """ docstring tbd """
-        db_conn = create_engine('sqlite:///sqlpt/college.db')
+        # db_conn = create_engine('sqlite:///sqlpt/college.db')
+        if self.db_conn_str:
+            db_conn = create_engine(self.db_conn_str)
+        else:
+            db_conn = None
 
         return db_conn
-
-    @property
-    def dataframe(self):
-        """ docstring tbd """
-        data_frame = pd.read_sql_query(self.__str__(), self.db_conn)
-
-        return data_frame
 
     def locate_column(self, s_str):
         """ docstring tbd """
@@ -949,16 +976,18 @@ class Query(DataSet):
         """ docstring tbd """
         invalid_column_coordinates = []
 
-        with self.db_conn.connect() as db_conn:
-            try:
-                db_conn.execute(str(self))
+        try:
+            print('*********************')
+            print(type(self))
+            # print(self.__dict__)
+            self.run()
 
-            except exc.OperationalError as e:
-                if 'no such column' in str(e):
-                    error_msg = str(e).split('\n')[0]
-                    invalid_column_name = error_msg.split(': ')[1]
-                    invalid_column_coordinates = self.locate_column(
-                        invalid_column_name)
+        except exc.OperationalError as e:
+            if 'no such column' in str(e):
+                error_msg = str(e).split('\n')[0]
+                invalid_column_name = error_msg.split(': ')[1]
+                invalid_column_coordinates = self.locate_column(
+                    invalid_column_name)
 
         return invalid_column_coordinates
 
@@ -1009,6 +1038,8 @@ class Query(DataSet):
         """ docstring tbd """
         rows = []
 
+        print('ttttttttttttttttt')
+        print(str(self))
         with self.db_conn.connect() as db_conn:
             rows = db_conn.execute(str(self), **kwargs)
             row_dicts = QueryResult()
@@ -1134,26 +1165,10 @@ class Query(DataSet):
 
         return formatted_sql
 
-    def describe(self):
-        """ docstring tbd """
-        description = self.dataframe.describe()
-
-        return description
-
-    def head(self, num_rows=5):
-        """ docstring tbd """
-        head_data = self.dataframe.head(num_rows)
-
-        return head_data
-
     def output_sql_file(self, path):
         """ docstring tbd """
         with open(path, 'wt') as sql_file:
             sql_file.write(self.format_sql())
-
-    def output_data_file(self, path):
-        """ docstring tbd """
-        self.dataframe.to_csv(path, index=False)
 
     def subquery_str(self):
         """ docstring tbd """

@@ -122,10 +122,16 @@ class ModifyingTestCase(TestCase):
               from section
         '''
 
-        query = Query(sql_str_scalarized)
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str_scalarized, db_conn_str=db_conn_str)
 
-        self.assertEqual(
-            query.select_clause.fields[2].query.crop().run().count(), 2)
+        subquery = query.select_clause.fields[2].query
+        subquery.db_conn_str = db_conn_str
+
+        actual_count = subquery.crop().run().count()
+        expected_count = 2
+
+        self.assertEqual(actual_count, expected_count)
 
     def test_query_is_leaf(self):
         """ docstring tbd """
