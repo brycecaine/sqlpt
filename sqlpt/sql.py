@@ -57,10 +57,17 @@ class Table(DataSet):
             if type(args[0]) == str:
                 name = args[0]
 
+        if len(args) == 2:
+            if type(args[0]) == str:
+                name = args[0]
+                db_conn_str = args[1]
+
         else:
             name = kwargs.get('name')
+            db_conn_str = kwargs.get('db_conn_str')
 
         self.name = name
+        self.db_conn_str = db_conn_str
 
     def __hash__(self):
         return hash(str(self))
@@ -421,6 +428,16 @@ class FromClause:
                 from_dataset, joins = self._parse_from_clause_from_tokens(
                     from_clause_token_list)
 
+        if len(args) == 2:
+            if type(args[0]) == str:
+                sql_str = args[0]
+                from_clause_token_list = (
+                    self._parse_from_clause_from_str(sql_str))
+                db_conn_str = args[1]
+
+                from_dataset, joins = self._parse_from_clause_from_tokens(
+                    from_clause_token_list, db_conn_str)
+
         else:
             from_dataset = kwargs.get('from_dataset')
             joins = kwargs.get('joins', [])
@@ -476,7 +493,7 @@ class FromClause:
 
         return from_clause_token_list
 
-    def _parse_from_clause_from_tokens(self, token_list):
+    def _parse_from_clause_from_tokens(self, token_list, db_conn_str=None):
         """ docstring tbd """
         from_dataset = None
         joins = []
@@ -487,7 +504,7 @@ class FromClause:
 
             # Get from_dataset
             token = token_list.pop(0)
-            from_dataset = get_dataset(token)
+            from_dataset = get_dataset(token, db_conn_str)
 
             # Construct joins
             kind = None
@@ -520,7 +537,7 @@ class FromClause:
 
                 # Parse dataset token
                 if type(token) in (Identifier, Parenthesis):
-                    dataset = get_dataset(token)
+                    dataset = get_dataset(token, db_conn_str)
 
                     continue
 
@@ -834,6 +851,7 @@ class Query(DataSet):
         having_clause = None
 
         s_str = ''
+
         if len(args) == 1:
             if type(args[0]) == str:
                 s_str = args[0]
@@ -843,6 +861,20 @@ class Query(DataSet):
 
                 select_clause = SelectClause(s_str) or None
                 from_clause = FromClause(s_str) or None
+                where_clause = WhereClause(s_str) or None
+                group_by_clause = None
+                having_clause = None
+
+        if len(args) == 2:
+            if type(args[0]) == str:
+                s_str = args[0]
+                db_conn_str = args[1]
+
+                # Accommodate subqueries surrounded by parens
+                s_str = s_str[1:-1] if s_str[:7] == '(select' else s_str
+
+                select_clause = SelectClause(s_str) or None
+                from_clause = FromClause(s_str, db_conn_str) or None
                 where_clause = WhereClause(s_str) or None
                 group_by_clause = None
                 having_clause = None
@@ -862,8 +894,6 @@ class Query(DataSet):
         self.group_by_clause = group_by_clause
         self.having_clause = having_clause
         self.db_conn_str = db_conn_str
-        print('#################')
-        print(self.db_conn_str)
 
     def __hash__(self):
         return hash(str(self))
@@ -873,10 +903,6 @@ class Query(DataSet):
 
         if isinstance(other, Query):
             select_clauses_equal = self.select_clause == other.select_clause
-            print('----------------------')
-            print(self)
-            print(other)
-            print('----------------------')
             from_clauses_equal = self._optional_clause_equal(other, 'from')
             where_clauses_equal = self._optional_clause_equal(other, 'where')
 
@@ -935,9 +961,6 @@ class Query(DataSet):
 
     @property
     def db_conn(self):
-        print('@@@@@@@@@@@@@@@@@@@@@@@@@')
-        print(self)
-        print(self.db_conn_str)
         """ docstring tbd """
         # db_conn = create_engine('sqlite:///sqlpt/college.db')
         if self.db_conn_str:
@@ -978,9 +1001,6 @@ class Query(DataSet):
         invalid_column_coordinates = []
 
         try:
-            print('*********************')
-            print(type(self))
-            # print(self.__dict__)
             self.run()
 
         except exc.OperationalError as e:
@@ -1039,8 +1059,6 @@ class Query(DataSet):
         """ docstring tbd """
         rows = []
 
-        print('ttttttttttttttttt')
-        print(str(self))
         with self.db_conn.connect() as db_conn:
             rows = db_conn.execute(str(self), **kwargs)
             row_dicts = QueryResult()
@@ -1419,16 +1437,16 @@ class DeleteStatement:
         return query.count()
 
 
-def get_dataset(token):
+def get_dataset(token, db_conn_str=None):
     """ docstring tbd """
     dataset = None
 
     if type(token) == Parenthesis:
         sql_str = str(token)[1:-1]
-        dataset = Query(sql_str)
+        dataset = Query(sql_str, db_conn_str)
 
     else:
-        dataset = Table(str(token))
+        dataset = Table(str(token), db_conn_str)
 
     return dataset
 

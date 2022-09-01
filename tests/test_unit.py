@@ -14,7 +14,9 @@ class StringTestCase(TestCase):
     def _test(self, sql_str, expected_select_clause, expected_from_clause,
               expected_where_clause):
         """ docstring tbd """
-        query = Query(sql_str)
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str, db_conn_str)
 
         expected_query = Query(
             select_clause=expected_select_clause,
@@ -41,8 +43,10 @@ class StringTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select fld_1 from dual where dummy = 'X'"
 
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+
         expected_select_clause = SelectClause('select fld_1')
-        expected_from_clause = FromClause('from dual')
+        expected_from_clause = FromClause('from dual', db_conn_str)
         expected_where_clause = WhereClause("where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
