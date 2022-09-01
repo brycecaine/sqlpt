@@ -55,12 +55,12 @@ class Table(DataSet):
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
-                sql_str = args[0]
+                name = args[0]
 
         else:
-            sql_str = kwargs.get('sql_str')
+            name = kwargs.get('name')
 
-        self.sql_str = sql_str
+        self.name = name
 
     def __hash__(self):
         return hash(str(self))
