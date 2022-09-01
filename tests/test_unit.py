@@ -710,7 +710,8 @@ class UpdateStatementTestCase(TestCase):
         """ docstring tbd """
         sql_str = "update student set major = 'BIOL' where id = 4"
 
-        update_statement = UpdateStatement(sql_str)
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        update_statement = UpdateStatement(sql_str, db_conn_str)
 
         actual_expected_row_count = update_statement.count()
         expected_expected_row_count = 1

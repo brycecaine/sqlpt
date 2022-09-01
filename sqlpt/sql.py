@@ -833,6 +833,7 @@ class Query(DataSet):
         group_by_clause = None
         having_clause = None
 
+        s_str = ''
         if len(args) == 1:
             if type(args[0]) == str:
                 s_str = args[0]
@@ -1297,6 +1298,7 @@ class UpdateStatement:
     update_clause: UpdateClause
     set_clause: SetClause
     where_clause: WhereClause
+    db_conn_str: str
 
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
@@ -1306,16 +1308,26 @@ class UpdateStatement:
                 set_clause = SetClause(s_str) or None
                 where_clause = WhereClause(s_str) or None
 
+        elif len(args) == 2:
+            if type(args[0]) == str:
+                s_str = args[0]
+                update_clause = UpdateClause(s_str) or None
+                set_clause = SetClause(s_str) or None
+                where_clause = WhereClause(s_str) or None
+                db_conn_str = args[1]
+
         else:
             s_str = ''
             update_clause = kwargs.get('update_clause')
             set_clause = kwargs.get('set_clause')
             where_clause = kwargs.get('where_clause')
+            db_conn_str = kwargs.get('db_conn_str')
 
         self.sql_str = s_str
         self.update_clause = update_clause
         self.set_clause = set_clause
         self.where_clause = where_clause
+        self.db_conn_str = db_conn_str
 
     def __str__(self):
         string = str(self.update_clause)
@@ -1337,7 +1349,8 @@ class UpdateStatement:
         query = Query(
             select_clause=select_clause,
             from_clause=from_clause,
-            where_clause=where_clause)
+            where_clause=where_clause,
+            db_conn_str=self.db_conn_str)
 
         return query.count()
 
