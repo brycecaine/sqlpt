@@ -57,7 +57,7 @@ class Table(DataSet):
             if type(args[0]) == str:
                 name = args[0]
 
-        if len(args) == 2:
+        elif len(args) == 2:
             if type(args[0]) == str:
                 name = args[0]
                 db_conn_str = args[1]
@@ -428,7 +428,7 @@ class FromClause:
                 from_dataset, joins = self._parse_from_clause_from_tokens(
                     from_clause_token_list)
 
-        if len(args) == 2:
+        elif len(args) == 2:
             if type(args[0]) == str:
                 sql_str = args[0]
                 from_clause_token_list = (
@@ -865,7 +865,7 @@ class Query(DataSet):
                 group_by_clause = None
                 having_clause = None
 
-        if len(args) == 2:
+        elif len(args) == 2:
             if type(args[0]) == str:
                 s_str = args[0]
                 db_conn_str = args[1]
@@ -1392,6 +1392,7 @@ class DeleteStatement:
     delete_clause: DeleteClause
     from_clause: FromClause
     where_clause: WhereClause
+    db_conn_str: str
 
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
@@ -1401,16 +1402,26 @@ class DeleteStatement:
                 from_clause = FromClause(s_str) or None
                 where_clause = WhereClause(s_str) or None
 
+        elif len(args) == 2:
+            if type(args[0]) == str:
+                s_str = args[0]
+                delete_clause = DeleteClause() or None
+                from_clause = FromClause(s_str) or None
+                where_clause = WhereClause(s_str) or None
+                db_conn_str = args[1]
+
         else:
             s_str = ''
             delete_clause = kwargs.get('delete_clause')
             from_clause = kwargs.get('from_clause')
             where_clause = kwargs.get('where_clause')
+            db_conn_str = kwargs.get('db_conn_str')
 
         self.sql_str = s_str
         self.delete_clause = delete_clause
         self.from_clause = from_clause
         self.where_clause = where_clause
+        self.db_conn_str = db_conn_str
 
     def __str__(self):
         string = str(self.delete_clause)
@@ -1432,7 +1443,8 @@ class DeleteStatement:
         query = Query(
             select_clause=select_clause,
             from_clause=from_clause,
-            where_clause=where_clause)
+            where_clause=where_clause,
+            db_conn_str=self.db_conn_str)
 
         return query.count()
 

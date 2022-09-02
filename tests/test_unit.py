@@ -32,8 +32,10 @@ class StringTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select * from dual where dummy = 'X'"
 
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+
         expected_select_clause = SelectClause('select *')
-        expected_from_clause = FromClause('from dual')
+        expected_from_clause = FromClause('from dual', db_conn_str)
         expected_where_clause = WhereClause("where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
@@ -56,8 +58,10 @@ class StringTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
 
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+
         expected_select_clause = SelectClause('select fld_1, fld_2')
-        expected_from_clause = FromClause('from dual')
+        expected_from_clause = FromClause('from dual', db_conn_str)
         expected_where_clause = WhereClause("where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
@@ -744,7 +748,8 @@ class DeleteStatementTestCase(TestCase):
         """ docstring tbd """
         sql_str = "delete from student where id = 4"
 
-        delete_statement = DeleteStatement(sql_str)
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        delete_statement = DeleteStatement(sql_str, db_conn_str)
 
         actual_expected_row_count = delete_statement.count()
         expected_expected_row_count = 1
