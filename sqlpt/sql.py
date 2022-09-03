@@ -63,7 +63,7 @@ class DataSet:
 
         group_by_clause = GroupByClause(field_names)
 
-        having_clause = HavingClause('having count(*) > 1')
+        having_clause = HavingClause(s_str='having count(*) > 1')
 
         query = Query(select_clause=select_clause,
                       from_clause=from_clause,
@@ -294,29 +294,19 @@ class Expression:
 class ExpressionClause:
     """An abstract expression clause; can be an on, where, having, or set clause"""
 
-    leading_word: str = dataclass_field(repr=False)
+    leading_word: str  #  = dataclass_field(repr=False)
     expression: Expression
 
     # TODO: remove args and kwargs
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1:
-            if type(args[0]) == str:
-                sql_str = args[0]
-                expression_clause_token_list = (
-                    self.parse_expression_clause(sql_str))
+    def __init__(self, s_str=None, leading_word=None, expression=None, token_list=None):
+        if s_str:
+            token_list = self.parse_expression_clause(s_str)
+            leading_word, expression = self.__class__.get_expression_clause_parts(token_list)
 
-                expression = self.__class__.get_expression_clause_parts(
-                    expression_clause_token_list)
+        elif token_list:
+            leading_word, expression = self.__class__.get_expression_clause_parts(token_list)
 
-            elif type(args[0]) == list:
-                expression_clause_token_list = args[0]
-
-                expression = self.__class__.get_expression_clause_parts(
-                    expression_clause_token_list)
-
-        else:
-            expression = kwargs.get('expression')
-
+        self.leading_word = leading_word
         self.expression = expression
 
     def __hash__(self):
@@ -374,20 +364,21 @@ class ExpressionClause:
 
         full_expression_words = expression.split(' ')
 
+        leading_word = None
+
         if full_expression_words[0] in ('on', 'where', 'having', 'set'):
-            full_expression_words.pop(0)
+            leading_word = full_expression_words.pop(0)
 
         expression = Expression(s_str=' '.join(full_expression_words))
 
-        return expression
+        return leading_word, expression
 
 
 class OnClause(ExpressionClause):
     """A sql join's on clause"""
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
-        self.leading_word = 'on'
+    def __init__(self, s_str=None, expression=None, token_list=None):
+        super().__init__(s_str=s_str, leading_word='on', expression=expression, token_list=token_list)
 
     @staticmethod
     def parse_on_clause(s_str):
@@ -590,7 +581,7 @@ class FromClause:
                     if kind and dataset and on_tokens:
                         join_kind = deepcopy(str(kind))
                         join_dataset = deepcopy(str(dataset))
-                        join_on_clause = OnClause(on_tokens)
+                        join_on_clause = OnClause(token_list=on_tokens)
 
                         join = Join(kind=join_kind,
                                     dataset=join_dataset,
@@ -617,7 +608,7 @@ class FromClause:
 
             # Create the last join
             if kind and dataset and on_tokens:
-                on_clause = OnClause(on_tokens)
+                on_clause = OnClause(token_list=on_tokens)
 
                 join = Join(kind=kind, dataset=dataset, on_clause=on_clause)
                 joins.append(join)
@@ -798,10 +789,9 @@ class Comparison:
 
 class WhereClause(ExpressionClause):
     """A where clause of a sql query"""
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
-        self.leading_word = 'where'
+    def __init__(self, s_str=None, expression=None, token_list=None):
+        super().__init__(s_str=s_str, leading_word='where', expression=expression, token_list=token_list)
 
     @staticmethod
     def parse_where_clause(s_str):
@@ -904,10 +894,8 @@ class GroupByClause:
 class HavingClause(ExpressionClause):
     """A having clause of a sql query"""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.leading_word = 'having'
+    def __init__(self, s_str=None, expression=None, token_list=None):
+        super().__init__(s_str=s_str, leading_word='having', expression=expression, token_list=token_list)
 
     @staticmethod
     def parse_having_clause(s_str):
@@ -974,7 +962,8 @@ class Query(DataSet):
 
                 select_clause = SelectClause(s_str) or None
                 from_clause = FromClause(s_str, db_conn_str) or None
-                where_clause = WhereClause(s_str) or None
+                # TODO: Make sure every class is instantiated with keyword arguments (but don't accept a general kwargs in init in order to be explicit)
+                where_clause = WhereClause(s_str=s_str) or None
                 group_by_clause = None
                 having_clause = None
 
@@ -988,7 +977,7 @@ class Query(DataSet):
 
                 select_clause = SelectClause(s_str) or None
                 from_clause = FromClause(s_str, db_conn_str) or None
-                where_clause = WhereClause(s_str) or None
+                where_clause = WhereClause(s_str=s_str) or None
                 group_by_clause = None
                 having_clause = None
 
@@ -1396,15 +1385,12 @@ class UpdateClause:
         return update_clause_str
 
 
-# TODO: Left off here...
 @dataclass
 class SetClause(ExpressionClause):
     """A set clause of an update statement"""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.leading_word = 'set'
+    def __init__(self, s_str=None, expression=None, token_list=None):
+        super().__init__(s_str=s_str, leading_word='set', expression=expression, token_list=token_list)
 
     @staticmethod
     def parse_set_clause(s_str):
@@ -1442,6 +1428,7 @@ class SetClause(ExpressionClause):
         return token_list
 
 
+# TODO: 2022-09-03 Left off here...
 @dataclass
 class UpdateStatement:
     """ docstring tbd """
@@ -1456,15 +1443,15 @@ class UpdateStatement:
             if type(args[0]) == str:
                 s_str = args[0]
                 update_clause = UpdateClause(s_str) or None
-                set_clause = SetClause(s_str) or None
-                where_clause = WhereClause(s_str) or None
+                set_clause = SetClause(s_str=s_str) or None
+                where_clause = WhereClause(s_str=s_str) or None
 
         elif len(args) == 2:
             if type(args[0]) == str:
                 s_str = args[0]
                 update_clause = UpdateClause(s_str) or None
-                set_clause = SetClause(s_str) or None
-                where_clause = WhereClause(s_str) or None
+                set_clause = SetClause(s_str=s_str) or None
+                where_clause = WhereClause(s_str=s_str) or None
                 db_conn_str = args[1]
 
         else:
@@ -1533,14 +1520,14 @@ class DeleteStatement:
                 s_str = args[0]
                 delete_clause = DeleteClause() or None
                 from_clause = FromClause(s_str) or None
-                where_clause = WhereClause(s_str) or None
+                where_clause = WhereClause(s_str=s_str) or None
 
         elif len(args) == 2:
             if type(args[0]) == str:
                 s_str = args[0]
                 delete_clause = DeleteClause() or None
                 from_clause = FromClause(s_str) or None
-                where_clause = WhereClause(s_str) or None
+                where_clause = WhereClause(s_str=s_str) or None
                 db_conn_str = args[1]
 
         else:

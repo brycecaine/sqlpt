@@ -264,31 +264,31 @@ class ExpressionClauseTestCase(TestCase):
 class OnClauseTestCase(TestCase):
     def test_on_clause_create(self):
         expression = Expression(s_str='a = b')
-        on_clause = OnClause(leading_word='on', expression=expression)
+        on_clause = OnClause(expression=expression)
 
-        self.assertTrue(on_clause)
+        self.assertEqual(on_clause.leading_word, 'on')
 
     def test_on_clause_parse(self):
         s_str = 'a = b'
         expression = Expression(s_str=s_str)
-        on_clause = OnClause(leading_word='on', expression=expression)
+        on_clause = OnClause(expression=expression)
         on_clause.parse_expression_clause(s_str)
 
     def test_on_clause_is_equivalent_to(self):
         s_str_1 = 'a = b'
         expression_1 = Expression(s_str=s_str_1)
-        on_clause_1 = OnClause(leading_word='on', expression=expression_1)
+        on_clause_1 = OnClause(expression=expression_1)
 
         s_str_2 = 'b = a'
         expression_2 = Expression(s_str=s_str_2)
-        on_clause_2 = OnClause(leading_word='on', expression=expression_2)
+        on_clause_2 = OnClause(expression=expression_2)
 
         self.assertTrue(on_clause_1.is_equivalent_to(on_clause_2))
 
     def test_on_clause_get_expression_clause_parse(self):
         s_str = 'a = b'
         expression = Expression(s_str=s_str)
-        on_clause = OnClause(leading_word='on', expression=expression)
+        on_clause = OnClause(expression=expression)
 
         on_clause_token_list = (on_clause.parse_expression_clause(s_str))
         expression = ExpressionClause.get_expression_clause_parts(on_clause_token_list)
@@ -317,31 +317,31 @@ class ComparisonTestCase(TestCase):
 class WhereClauseTestCase(TestCase):
     def test_where_clause_create(self):
         expression = Expression(s_str='a = b')
-        where_clause = WhereClause(leading_word='where', expression=expression)
+        where_clause = WhereClause(expression=expression)
 
         self.assertTrue(where_clause)
 
     def test_where_clause_parse(self):
         s_str = 'a = b'
         expression = Expression(s_str=s_str)
-        where_clause = WhereClause(leading_word='where', expression=expression)
+        where_clause = WhereClause(expression=expression)
         where_clause.parse_expression_clause(s_str)
 
     def test_where_clause_is_equivalent_to(self):
         s_str_1 = 'a = b'
         expression_1 = Expression(s_str=s_str_1)
-        where_clause_1 = WhereClause(leading_word='where', expression=expression_1)
+        where_clause_1 = WhereClause(expression=expression_1)
 
         s_str_2 = 'b = a'
         expression_2 = Expression(s_str=s_str_2)
-        where_clause_2 = WhereClause(leading_word='where', expression=expression_2)
+        where_clause_2 = WhereClause(expression=expression_2)
 
         self.assertTrue(where_clause_1.is_equivalent_to(where_clause_2))
 
     def test_where_clause_get_expression_clause_parse(self):
         s_str = 'a = b'
         expression = Expression(s_str=s_str)
-        where_clause = WhereClause(leading_word='where', expression=expression)
+        where_clause = WhereClause(expression=expression)
 
         where_clause_token_list = (where_clause.parse_expression_clause(s_str))
         expression = ExpressionClause.get_expression_clause_parts(where_clause_token_list)
@@ -349,7 +349,7 @@ class WhereClauseTestCase(TestCase):
         self.assertTrue(expression)
 
     def test_where_locate_field(self):
-        where_clause = WhereClause('where a = b and c = d')
+        where_clause = WhereClause(s_str='where a = b and c = d')
 
         location_a = where_clause.locate_field('a')
         expected_locations_a = [('where_clause', 'expression', 'comparisons', 0, 'left_term')]
@@ -378,31 +378,31 @@ class GroupByClauseTestCase(TestCase):
 class HavingClauseTestCase(TestCase):
     def test_having_clause_create(self):
         expression = Expression(s_str='a = b')
-        having_clause = HavingClause(leading_word='having', expression=expression)
+        having_clause = HavingClause(expression=expression)
 
         self.assertTrue(having_clause)
 
     def test_having_clause_parse(self):
         s_str = 'a = b'
         expression = Expression(s_str=s_str)
-        having_clause = HavingClause(leading_word='having', expression=expression)
+        having_clause = HavingClause(expression=expression)
         having_clause.parse_expression_clause(s_str)
 
     def test_having_clause_is_equivalent_to(self):
         s_str_1 = 'a = b'
         expression_1 = Expression(s_str=s_str_1)
-        having_clause_1 = HavingClause(leading_word='having', expression=expression_1)
+        having_clause_1 = HavingClause(expression=expression_1)
 
         s_str_2 = 'b = a'
         expression_2 = Expression(s_str=s_str_2)
-        having_clause_2 = HavingClause(leading_word='having', expression=expression_2)
+        having_clause_2 = HavingClause(expression=expression_2)
 
         self.assertTrue(having_clause_1.is_equivalent_to(having_clause_2))
 
     def test_having_clause_get_expression_clause_parse(self):
         s_str = 'a = b'
         expression = Expression(s_str=s_str)
-        having_clause = HavingClause(leading_word='having', expression=expression)
+        having_clause = HavingClause(expression=expression)
 
         having_clause_token_list = (having_clause.parse_expression_clause(s_str))
         expression = ExpressionClause.get_expression_clause_parts(having_clause_token_list)
@@ -417,31 +417,32 @@ class HavingClauseTestCase(TestCase):
 class SetClauseTestCase(TestCase):
     def test_set_clause_create(self):
         expression = Expression(s_str='a = b')
-        set_clause = SetClause(leading_word='set', expression=expression)
+        set_clause = SetClause(expression=expression)
 
         self.assertTrue(set_clause)
 
     def test_set_clause_parse(self):
         s_str = 'a = b'
         expression = Expression(s_str=s_str)
-        set_clause = SetClause(leading_word='set', expression=expression)
+        set_clause = SetClause(expression=expression)
         set_clause.parse_expression_clause(s_str)
 
     def test_set_clause_is_equivalent_to(self):
         s_str_1 = 'a = b'
         expression_1 = Expression(s_str=s_str_1)
-        set_clause_1 = SetClause(leading_word='set', expression=expression_1)
+        set_clause_1 = SetClause(expression=expression_1)
+        print(set_clause_1)
 
         s_str_2 = 'b = a'
         expression_2 = Expression(s_str=s_str_2)
-        set_clause_2 = SetClause(leading_word='set', expression=expression_2)
+        set_clause_2 = SetClause(expression=expression_2)
 
         self.assertTrue(set_clause_1.is_equivalent_to(set_clause_2))
 
     def test_set_clause_get_expression_clause_parse(self):
         s_str = 'a = b'
         expression = Expression(s_str=s_str)
-        set_clause = SetClause(leading_word='set', expression=expression)
+        set_clause = SetClause(expression=expression)
 
         set_clause_token_list = (set_clause.parse_expression_clause(s_str))
         expression = ExpressionClause.get_expression_clause_parts(set_clause_token_list)
