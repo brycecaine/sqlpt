@@ -290,10 +290,10 @@ class Expression:
         return string
 
 
-# TODO: Left off here 2022-09-03; continue writing all class-based tests in test_classes
 @dataclass
 class ExpressionClause:
-    """ docstring tbd """
+    """An abstract expression clause; can be an on, where, having, or set clause"""
+
     leading_word: str = dataclass_field(repr=False)
     expression: Expression
 
@@ -333,11 +333,19 @@ class ExpressionClause:
         return string
 
     def parse_expression_clause(self, sql_str):
-        """ docstring tbd """
+        """Parses and returns a token list of the expression parts of an string"""
         raise NotImplementedError
 
     def is_equivalent_to(self, other):
-        """ docstring tbd """
+        """Returns equivalence of the expression logic; this is different than checking
+            for equality (__eq__)
+        Args:
+            other (ExpressionClause): Another expression clause to compare to
+            
+        Returns:
+            equivalent (bool): Whether the expression clauses are logically equivalent
+        """
+
         equivalent = (get_truth_table_result(str(self.expression)) ==
                       get_truth_table_result(str(other.expression)))
 
@@ -345,7 +353,16 @@ class ExpressionClause:
 
     @staticmethod
     def get_expression_clause_parts(token_list):
-        """ docstring tbd """
+        """Returns an expression based on the given token list
+        
+        Args:
+            token_list (list): A list of sqlparse.sql Token instances
+
+        Returns:
+            expression (Expression): An Expression instance based on the token list
+        """
+
+        # TODO: Set this to None instead of ''?
         expression = ''
 
         for sql_token in token_list:
@@ -364,6 +381,7 @@ class ExpressionClause:
         return expression
 
 
+# TODO: Left off here 2022-09-03; continue writing all class-based tests in test_classes
 class OnClause(ExpressionClause):
     """ docstring tbd """
     def __init__(self, *args, **kwargs):
