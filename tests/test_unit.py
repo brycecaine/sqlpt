@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from sqlpt import service
 from sqlpt.sql import (
-    Comparison, DeleteClause, DeleteStatement, Expression, Field, FromClause,
+    Comparison, DeleteClause, DeleteStatement, Field, FromClause,
     Join, OnClause, Query, SelectClause, SetClause, Table, UpdateClause,
     UpdateStatement, WhereClause, parse_fields)
 
@@ -599,91 +599,6 @@ class ComparisonTestCase(TestCase):
         self.assertEqual(comparison.bool_conjunction, '')
         self.assertEqual(comparison.bool_sign, '')
         self.assertEqual(str(comparison), 'a = b')
-
-
-class ExpressionTestCase(TestCase):
-    """ docstring tbd """
-    def test_basic(self):
-        """ docstring tbd """
-        expression = Expression('a = b')
-
-        comparison = expression.comparisons[0]
-
-        self.assertEqual(comparison.bool_conjunction, '')
-        self.assertEqual(comparison.bool_sign, '')
-        self.assertEqual(str(comparison), 'a = b')
-
-    def test_and(self):
-        """ docstring tbd """
-        expression = Expression('a = b and c = d')
-
-        comparison_0 = expression.comparisons[0]
-        comparison_1 = expression.comparisons[1]
-
-        self.assertEqual(comparison_0.bool_conjunction, '')
-        self.assertEqual(comparison_0.bool_sign, '')
-        self.assertEqual(str(comparison_0), 'a = b')
-
-        self.assertEqual(comparison_1.bool_conjunction, 'and')
-        self.assertEqual(comparison_1.bool_sign, '')
-        self.assertEqual(comparison_1.left_term, 'c')
-        self.assertEqual(comparison_1.operator, '=')
-        self.assertEqual(comparison_1.right_term, 'd')
-        self.assertEqual(str(comparison_1), 'and c = d')
-
-    def test_and_not(self):
-        """ docstring tbd """
-        expression = Expression('a = b and not c = d')
-
-        comparison_0 = expression.comparisons[0]
-        comparison_1 = expression.comparisons[1]
-
-        self.assertEqual(comparison_0.bool_conjunction, '')
-        self.assertEqual(comparison_0.bool_sign, '')
-        self.assertEqual(str(comparison_0), 'a = b')
-
-        self.assertEqual(comparison_1.bool_conjunction, 'and')
-        self.assertEqual(comparison_1.bool_sign, 'not')
-        self.assertEqual(comparison_1.left_term, 'c')
-        self.assertEqual(comparison_1.operator, '=')
-        self.assertEqual(comparison_1.right_term, 'd')
-        self.assertEqual(str(comparison_1), 'and not c = d')
-
-    def test_or(self):
-        """ docstring tbd """
-        expression = Expression('a = b or c = d')
-
-        comparison_0 = expression.comparisons[0]
-        comparison_1 = expression.comparisons[1]
-
-        self.assertEqual(comparison_0.bool_conjunction, '')
-        self.assertEqual(comparison_0.bool_sign, '')
-        self.assertEqual(str(comparison_0), 'a = b')
-
-        self.assertEqual(comparison_1.bool_conjunction, 'or')
-        self.assertEqual(comparison_1.bool_sign, '')
-        self.assertEqual(comparison_1.left_term, 'c')
-        self.assertEqual(comparison_1.operator, '=')
-        self.assertEqual(comparison_1.right_term, 'd')
-        self.assertEqual(str(comparison_1), 'or c = d')
-
-    def test_or_not(self):
-        """ docstring tbd """
-        expression = Expression('a = b or not c = d')
-
-        comparison_0 = expression.comparisons[0]
-        comparison_1 = expression.comparisons[1]
-
-        self.assertEqual(comparison_0.bool_conjunction, '')
-        self.assertEqual(comparison_0.bool_sign, '')
-        self.assertEqual(str(comparison_0), 'a = b')
-
-        self.assertEqual(comparison_1.bool_conjunction, 'or')
-        self.assertEqual(comparison_1.bool_sign, 'not')
-        self.assertEqual(comparison_1.left_term, 'c')
-        self.assertEqual(comparison_1.operator, '=')
-        self.assertEqual(comparison_1.right_term, 'd')
-        self.assertEqual(str(comparison_1), 'or not c = d')
 
 
 class UpdateStatementTestCase(TestCase):

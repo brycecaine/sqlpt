@@ -251,41 +251,34 @@ class SelectClause:
         """ docstring tbd """
 
 
-# TODO: Left off here 2022-09-03; continue writing all class-based tests in test_classes
 @dataclass
 class Expression:
-    """ docstring tbd """
+    """An expression as a list of a = b comparisons"""
     comparisons: list
 
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1:
-            if type(args[0]) == str:
-                comparisons = []
+    def __init__(self, s_str=None, comparisons=None):
+        if s_str:
+            comparisons = []
+            statement = sqlparse.parse(s_str)
 
-                if args[0]:
-                    statement = sqlparse.parse(args[0])
+            expression_tokens = (
+                remove_whitespace(statement[0].tokens))
+            comparison_token_list = []
+            comparison_token_lists = []
 
-                    expression_tokens = (
-                        remove_whitespace(statement[0].tokens))
+            for token in expression_tokens:
+                if type(token) != SqlParseComparison:
+                    comparison_token_list.append(token)
+
+                elif type(token) == SqlParseComparison:
+                    comparison_token_list.append(token)
+                    comparison_token_lists.append(
+                        comparison_token_list)  # deepcopy?
                     comparison_token_list = []
-                    comparison_token_lists = []
 
-                    for token in expression_tokens:
-                        if type(token) != SqlParseComparison:
-                            comparison_token_list.append(token)
-
-                        elif type(token) == SqlParseComparison:
-                            comparison_token_list.append(token)
-                            comparison_token_lists.append(
-                                comparison_token_list)  # deepcopy?
-                            comparison_token_list = []
-
-                    for comparison_token_list in comparison_token_lists:
-                        comparison = Comparison(comparison_token_list)
-                        comparisons.append(comparison)
-
-        else:
-            comparisons = kwargs.get('comparisons')
+            for comparison_token_list in comparison_token_lists:
+                comparison = Comparison(comparison_token_list)
+                comparisons.append(comparison)
 
         self.comparisons = comparisons
 
@@ -300,6 +293,7 @@ class Expression:
         return string
 
 
+# TODO: Left off here 2022-09-03; continue writing all class-based tests in test_classes
 @dataclass
 class ExpressionClause:
     """ docstring tbd """
@@ -368,7 +362,7 @@ class ExpressionClause:
         if full_expression_words[0] in ('on', 'where', 'having', 'set'):
             full_expression_words.pop(0)
 
-        expression = Expression(' '.join(full_expression_words))
+        expression = Expression(s_str=' '.join(full_expression_words))
 
         return expression
 
