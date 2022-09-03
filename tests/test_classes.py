@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from sqlalchemy.engine import Engine
-from sqlpt.sql import DataSet, Expression, SelectClause, Table, ExpressionClause
+from sqlpt.sql import DataSet, Expression, SelectClause, Table, OnClause, ExpressionClause
 
 
 class DataSetTestCase(TestCase):
@@ -256,6 +256,59 @@ class ExpressionClauseTestCase(TestCase):
             expression_clause = ExpressionClause(leading_word='where', expression=expression)
 
             expression_clause_token_list = (expression_clause.parse_expression_clause(s_str))
-            expression = self.__class__.get_expression_clause_parts(expression_clause_token_list)
+            expression = ExpressionClause.get_expression_clause_parts(expression_clause_token_list)
 
             self.assertTrue(expression)
+
+
+class OnClauseTestCase(TestCase):
+    def test_on_clause_create(self):
+        expression = Expression(s_str='a = b')
+        on_clause = OnClause(leading_word='where', expression=expression)
+
+        self.assertTrue(on_clause)
+
+    def test_on_clause_parse(self):
+        s_str = 'a = b'
+        expression = Expression(s_str=s_str)
+        on_clause = OnClause(leading_word='where', expression=expression)
+        on_clause.parse_expression_clause(s_str)
+
+    def test_on_clause_is_equivalent_to(self):
+        s_str_1 = 'a = b'
+        expression_1 = Expression(s_str=s_str_1)
+        on_clause_1 = OnClause(leading_word='where', expression=expression_1)
+
+        s_str_2 = 'b = a'
+        expression_2 = Expression(s_str=s_str_2)
+        on_clause_2 = OnClause(leading_word='where', expression=expression_2)
+
+        self.assertTrue(on_clause_1.is_equivalent_to(on_clause_2))
+
+    def test_on_clause_get_expression_clause_parse(self):
+        s_str = 'a = b'
+        expression = Expression(s_str=s_str)
+        on_clause = OnClause(leading_word='where', expression=expression)
+
+        on_clause_token_list = (on_clause.parse_expression_clause(s_str))
+        expression = ExpressionClause.get_expression_clause_parts(on_clause_token_list)
+
+        self.assertTrue(expression)
+
+
+class JoinTestCase(TestCase):
+    def test_join_clause_create(self):
+        # TODO: Come back to this after testing all expression clause types
+        pass
+
+
+class FromClauseTestCase(TestCase):
+    def test_join_clause_create(self):
+        # TODO: Come back to this after testing all expression clause types
+        pass
+
+
+class ComparisonTestCase(TestCase):
+    def test_join_clause_create(self):
+        # TODO: Come back to this after testing all expression clause types
+        pass

@@ -297,6 +297,7 @@ class ExpressionClause:
     leading_word: str = dataclass_field(repr=False)
     expression: Expression
 
+    # TODO: remove args and kwargs
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if type(args[0]) == str:
@@ -381,30 +382,45 @@ class ExpressionClause:
         return expression
 
 
-# TODO: Left off here 2022-09-03; continue writing all class-based tests in test_classes
 class OnClause(ExpressionClause):
-    """ docstring tbd """
+    """A sql join's on clause"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.leading_word = 'on'
 
     @staticmethod
-    def parse_on_clause(sql_str):
-        """ docstring tbd """
-        sql_tokens = (
-            remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+    def parse_on_clause(s_str):
+        """Parses and returns an on-clause token list based on the given string
+        
+        Args:
+            s_str (str): A short sql string representing an on clause
 
-        on_clause_token_list = []
+        Returns:
+            token_list (list): A token list
+        """
+
+        sql_tokens = (
+            remove_whitespace(sqlparse.parse(s_str)[0].tokens))
+
+        token_list = []
 
         for sql_token in sql_tokens:
-            on_clause_token_list.append(sql_token)
+            token_list.append(sql_token)
 
-        return on_clause_token_list
+        return token_list
 
-    def parse_expression_clause(self, sql_str):
-        """ docstring tbd """
-        token_list = self.__class__.parse_on_clause(sql_str)
+    def parse_expression_clause(self, s_str):
+        """Returns an on-clause token list based on the given string
+        
+        Args:
+            s_str (str): A short sql string representing an on clause
+
+        Returns:
+            token_list (list): A token list
+        """
+
+        token_list = self.__class__.parse_on_clause(s_str)
 
         return token_list
 
@@ -780,6 +796,7 @@ class Comparison:
         return equivalent
 
 
+# TODO: Left off here 2022-09-03; continue writing all class-based tests in test_classes
 class WhereClause(ExpressionClause):
     """ docstring tbd """
     def __init__(self, *args, **kwargs):
