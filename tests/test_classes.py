@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from sqlalchemy.engine import Engine
-from sqlpt.sql import DataSet, Expression, SelectClause, Table, OnClause, ExpressionClause
+from sqlpt.sql import DataSet, Expression, SelectClause, Table, OnClause, ExpressionClause, WhereClause
 
 
 class DataSetTestCase(TestCase):
@@ -312,3 +312,58 @@ class ComparisonTestCase(TestCase):
     def test_join_clause_create(self):
         # TODO: Come back to this after testing all expression clause types
         pass
+
+
+class WhereClauseTestCase(TestCase):
+    def test_where_clause_create(self):
+        expression = Expression(s_str='a = b')
+        where_clause = WhereClause(leading_word='where', expression=expression)
+
+        self.assertTrue(where_clause)
+
+    def test_where_clause_parse(self):
+        s_str = 'a = b'
+        expression = Expression(s_str=s_str)
+        where_clause = WhereClause(leading_word='where', expression=expression)
+        where_clause.parse_expression_clause(s_str)
+
+    def test_where_clause_is_equivalent_to(self):
+        s_str_1 = 'a = b'
+        expression_1 = Expression(s_str=s_str_1)
+        where_clause_1 = WhereClause(leading_word='where', expression=expression_1)
+
+        s_str_2 = 'b = a'
+        expression_2 = Expression(s_str=s_str_2)
+        where_clause_2 = WhereClause(leading_word='where', expression=expression_2)
+
+        self.assertTrue(where_clause_1.is_equivalent_to(where_clause_2))
+
+    def test_where_clause_get_expression_clause_parse(self):
+        s_str = 'a = b'
+        expression = Expression(s_str=s_str)
+        where_clause = WhereClause(leading_word='where', expression=expression)
+
+        where_clause_token_list = (where_clause.parse_expression_clause(s_str))
+        expression = ExpressionClause.get_expression_clause_parts(where_clause_token_list)
+
+        self.assertTrue(expression)
+
+    def test_where_locate_field(self):
+        where_clause = WhereClause('where a = b and c = d')
+
+        location_a = where_clause.locate_field('a')
+        expected_locations_a = [('where_clause', 'expression', 'comparisons', 0, 'left_term')]
+
+        location_b = where_clause.locate_field('b')
+        expected_locations_b = [('where_clause', 'expression', 'comparisons', 0, 'right_term')]
+
+        location_c = where_clause.locate_field('c')
+        expected_locations_c = [('where_clause', 'expression', 'comparisons', 1, 'left_term')]
+
+        location_d = where_clause.locate_field('d')
+        expected_locations_d = [('where_clause', 'expression', 'comparisons', 1, 'right_term')]
+
+        self.assertEqual(location_a, expected_locations_a)
+        self.assertEqual(location_b, expected_locations_b)
+        self.assertEqual(location_c, expected_locations_c)
+        self.assertEqual(location_d, expected_locations_d)

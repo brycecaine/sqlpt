@@ -798,19 +798,27 @@ class Comparison:
 
 # TODO: Left off here 2022-09-03; continue writing all class-based tests in test_classes
 class WhereClause(ExpressionClause):
-    """ docstring tbd """
+    """A select clause of a sql query"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.leading_word = 'where'
 
     @staticmethod
-    def parse_where_clause(sql_str):
-        """ docstring tbd """
-        sql_tokens = (
-            remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+    def parse_where_clause(s_str):
+        """Parses and returns a where-clause token list based on the given string
+        
+        Args:
+            s_str (str): A short sql string representing a where clause
 
-        where_clause_token_list = []
+        Returns:
+            token_list (list): A token list
+        """
+
+        sql_tokens = (
+            remove_whitespace(sqlparse.parse(s_str)[0].tokens))
+
+        token_list = []
 
         start_appending = False
 
@@ -823,18 +831,34 @@ class WhereClause(ExpressionClause):
                 start_appending = True
 
             if start_appending:
-                where_clause_token_list.append(sql_token)
+                token_list.append(sql_token)
 
-        return where_clause_token_list
+        return token_list
 
     def parse_expression_clause(self, sql_str):
-        """ docstring tbd """
+        """Returns a where-clause token list based on the given string
+        
+        Args:
+            s_str (str): A short sql string representing a where clause
+
+        Returns:
+            token_list (list): A token list
+        """
+
         token_list = self.__class__.parse_where_clause(sql_str)
 
         return token_list
 
     def locate_field(self, s_str):
-        """ docstring tbd """
+        """Returns a field's "location" in the where clause
+        
+        Args:
+            s_str (str): A short sql string representing a field to be located
+            
+        Returns:
+            locations (list): The resulting list of field locations
+        """
+
         locations = []
 
         for i, comparison in enumerate(self.expression.comparisons):
