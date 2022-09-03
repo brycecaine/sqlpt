@@ -3,4 +3,5 @@ tests/output/sql/
 *.db
 *.egg-info
 *.pyc
+.DS_Store
 NOTES.md
