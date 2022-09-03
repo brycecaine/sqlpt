@@ -3,6 +3,8 @@ from unittest import TestCase
 from sqlalchemy.engine import Engine
 from sqlpt.sql import DataSet, Expression, SelectClause, Table, OnClause, ExpressionClause, WhereClause, HavingClause, SetClause
 
+# QueryResult
+
 
 class DataSetTestCase(TestCase):
     def setUp(self):
@@ -10,21 +12,21 @@ class DataSetTestCase(TestCase):
 
         self.db_conn_str = 'sqlite:///sqlpt/college.db'
 
-    def test_data_set_create(self):
+    def test_dataset_create(self):
         dataset = DataSet(self.db_conn_str)
 
         self.assertEqual(dataset.db_conn_str, self.db_conn_str)
 
-    def test_data_set_db_conn_exists(self):
+    def test_dataset_db_conn_exists(self):
         dataset = DataSet(self.db_conn_str)
 
         self.assertEqual(type(dataset.db_conn), Engine)
 
-    def test_data_set_db_conn_none(self):
+    def test_dataset_db_conn_none(self):
         with self.assertRaises(TypeError):
             DataSet()
 
-    def test_data_set_rows_unique(self):
+    def test_dataset_rows_unique(self):
         dataset = DataSet(self.db_conn_str)
 
         with self.assertRaises(Exception):
@@ -412,6 +414,16 @@ class HavingClauseTestCase(TestCase):
 # Query
 # Field
 # UpdateClause
+# UpdateStatement
+# DeleteClause
+# DeleteStatement
+# get_dataset
+# parse_select_clause
+# parse_field
+# parse_fields
+# parse_fields_from_token_list
+
+# TODO: Convert sql_str to s_str where it makes sense
 
 
 class SetClauseTestCase(TestCase):

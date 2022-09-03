@@ -122,7 +122,7 @@ class ModifyingTestCase(TestCase):
         subquery = query.select_clause.fields[2].query
         subquery.db_conn_str = db_conn_str
 
-        actual_count = subquery.crop().run().count()
+        actual_count = subquery.crop().count()
         expected_count = 2
 
         self.assertEqual(actual_count, expected_count)

@@ -98,7 +98,7 @@ class Table(DataSet):
         """
 
         query = Query(f'select rowid from {self.name}', self.db_conn_str)
-        row_count = query.run().count()
+        row_count = query.count()
 
         return row_count
 
@@ -1168,8 +1168,7 @@ class Query(DataSet):
     def counts(self):
         """ docstring tbd """
         counts_dict = {}
-        # TODO: Change instances of run().count() to just count()
-        query_count = self.run().count()
+        query_count = self.count()
         counts_dict['query'] = query_count
 
         from_dataset = self.from_clause.from_dataset
