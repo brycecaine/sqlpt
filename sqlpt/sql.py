@@ -65,6 +65,8 @@ class Table(DataSet):
     name: str
 
     def __init__(self, *args, **kwargs):
+        db_conn_str = None
+
         if len(args) == 1:
             if type(args[0]) == str:
                 name = args[0]
