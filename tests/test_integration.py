@@ -68,26 +68,6 @@ class ProbingTestCase(TestCase):
 
         self.assertEqual(actual_counts, expected_counts)
 
-    def test_rows_unique(self):
-        """ docstring tbd """
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        table = Table('student_section', db_conn_str)
-        field_names = ['student_id', 'term_id', 'section_id']
-        actual_uniqueness = table.rows_unique(field_names)
-        expected_uniqueness = True
-
-        self.assertEqual(actual_uniqueness, expected_uniqueness)
-
-    def test_rows_not_unique(self):
-        """ docstring tbd """
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        table = Table('student_section', db_conn_str)
-        field_names = ['term_id']
-        actual_uniqueness = table.rows_unique(field_names)
-        expected_uniqueness = False
-
-        self.assertEqual(actual_uniqueness, expected_uniqueness)
-
 
 class ModifyingTestCase(TestCase):
     """ docstring tbd """

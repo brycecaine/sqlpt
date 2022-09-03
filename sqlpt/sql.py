@@ -23,29 +23,46 @@ class QueryResult(list):
 
 @dataclass
 class DataSet:
-    """ docstring tbd """
+    """An abstract dataset; can be a table or query"""
+
     db_conn_str: str
 
     @property
     def db_conn(self):
-        """ docstring tbd """
-        # db_conn = create_engine('sqlite:///sqlpt/college.db')
-        if self.db_conn_str:
-            db_conn = create_engine(self.db_conn_str)
-        else:
-            db_conn = None
+        """Returns the database connection engine based on a connection string
+
+        Returns:
+            db_conn (Engine): A sqlalchemy database Engine instance
+        """
+
+        db_conn = create_engine(self.db_conn_str) if self.db_conn_str else None
 
         return db_conn
 
     def rows_unique(self, field_names):
-        """ docstring tbd """
+        """Returns the dataset's row-uniqueness based on field_names
+
+        Args:
+            field_names (list): A list of the dataset's field names 
+        
+        Returns:
+            unique (bool): A dataset's row-uniqueness
+
+        Raises:
+            Exception: If type is DataSet; an abstract DataSet has no rows
+        """
+
+        if type(self) == DataSet:
+            raise Exception('Cannot check uniqueness of rows on an abstract DataSet')
+
         fields = [Field(field_name) for field_name in field_names]
-        select_clause = SelectClause(fields)
+        select_clause = SelectClause(fields=fields)
         select_clause.add_field('count(*)')
 
         from_clause = FromClause(from_dataset=self)
 
         group_by_clause = GroupByClause(field_names)
+
         having_clause = HavingClause('having count(*) > 1')
 
         query = Query(select_clause=select_clause,
@@ -61,99 +78,62 @@ class DataSet:
 
 @dataclass
 class Table(DataSet):
-    """ docstring tbd """
+    """A database table"""
+
     name: str
-
-    def __init__(self, *args, **kwargs):
-        db_conn_str = None
-
-        if len(args) == 1:
-            if type(args[0]) == str:
-                name = args[0]
-
-        elif len(args) == 2:
-            if type(args[0]) == str:
-                name = args[0]
-                db_conn_str = args[1]
-
-        else:
-            name = kwargs.get('name')
-            db_conn_str = kwargs.get('db_conn_str')
-
-        self.name = name
-        self.db_conn_str = db_conn_str
 
     def __hash__(self):
         return hash(str(self))
 
     def __str__(self):
-        if hasattr(self, 'name'):
-            string = self.name
-        else:
-            string = ''
+        string = self.name if hasattr(self, 'name') else ''
 
         return string
 
     def count(self):
-        """ docstring tbd """
+        """Returns the row count for the table
+
+        Returns:
+            row_count (int): The table's row count
+        """
+
         query = Query(f'select rowid from {self.name}', self.db_conn_str)
         row_count = query.run().count()
 
         return row_count
 
     def get_columns(self):
-        """ docstring tbd """
+        """Returns the columns metadata for the table
+        
+        Returns:
+            columns (list): A list of dicts containing the columns metadata
+        """
+
         insp = inspect(self.db_conn)
         columns = insp.get_columns(self.name)
 
         return columns
 
-    def is_equivalent_to(self, other):
-        """ docstring tbd """
-        equivalent = False
+    def get_column_names(self):
+        """Returns the column names for the table
+        
+        Returns:
+            column_names (list): A list of column names
+        """
 
-        if isinstance(other, self.__class__):
-            equivalent = self.name == other.name
+        columns = self.get_columns()
+        column_names = [col_dict['name'] for col_dict in columns]
 
-        return equivalent
+        return column_names
 
 
 @dataclass
 class SelectClause:
-    """ docstring tbd """
+    """A select clause of a sql query"""
     fields: list
 
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1:
-            if type(args[0]) == str:
-                sql_str = args[0]
-                fields = parse_select_clause(sql_str)
-
-            elif type(args[0]) == list:
-                if args[0]:
-                    if type(args[0][0]) == Token:
-                        token_list = args[0]
-                        fields = parse_fields_from_token_list(token_list)
-
-                    elif type(args[0][0]) == Field:
-                        fields = args[0]
-
-                    else:
-                        if type(args[0][1]) == list:
-                            field_strs = args[0][1]
-                        else:
-                            field_strs = args[0][1:]
-
-                        sql_str = ', '.join(field_strs)
-                        sql_str = f'select {sql_str}'
-                        fields = parse_select_clause(sql_str)
-                else:
-                    fields = []
-
-        else:
-            fields = kwargs.get('fields')
-
-        self.fields = fields
+    def __init__(self, s_str=None, fields=None):
+        self.fields = parse_select_clause(s_str) if s_str else fields
 
     def __hash__(self):
         return hash(str(self))
@@ -165,31 +145,80 @@ class SelectClause:
         return False
 
     def __str__(self):
-        select_clause_str = f"select {', '.join(self.field_strs)}"
+        field_names_str = ', '.join(self.field_names)
+        select_clause_str = f"select {field_names_str}"
 
         return select_clause_str
 
     @property
-    def field_strs(self):
-        """ docstring tbd """
-        field_strs = [str(field) for field in self.fields]
+    def field_names(self):
+        """Returns a list of field names from the select clause
 
-        return field_strs
+        Returns:
+            field_names
+        """
 
-    def _get_field(self, *args):
-        """ docstring tbd """
-        # TODO: Maybe find the failed integration test here?
-        if type(args[0]) == str:
-            field = Field(args[0])
-        elif type(args[0]) == Field:
-            field = args[0]
-        else:
-            field = Field(*args)
+        field_names = [str(field) for field in self.fields]
 
-        return field
+        return field_names
+
+    def add_field(self, s_str=None, field=None):
+        """Adds a field to the select clause and returns the resulting field list
+        
+        Args:
+            s_str (str): A short sql string representing a field to be added
+            field (Field): A field to be added
+            
+        Returns:
+            self.fields (list): The resulting field list after the field has been added
+        
+        Raises:
+            Exception: If neither s_str or field are provided
+        """
+
+        if s_str is None and field is None:
+            raise Exception('Either s_str or field need to have values')
+
+        field = Field(s_str) if s_str else field
+
+        self.fields.append(field)
+
+        return self.fields
+
+    def remove_field(self, s_str=None, field=None):
+        """Removes a field from the select clause and returns the resulting fields list
+        
+        Args:
+            s_str (str): A short sql string representing a field to be removed
+            field (Field): A field to be removed
+            
+        Returns:
+            self.fields (list): The resulting field list after the field has been
+                removed
+        
+        Raises:
+            Exception: If neither s_str or field are provided
+        """
+
+        if s_str is None and field is None:
+            raise Exception('Either s_str or field need to have values')
+
+        field = Field(s_str) if s_str else field
+
+        self.fields.remove(field)
+
+        return self.fields
 
     def locate_field(self, s_str):
-        """ docstring tbd """
+        """Returns a field's "location" in the select clause
+        
+        Args:
+            s_str (str): A short sql string representing a field to be located
+            
+        Returns:
+            locations (list): The resulting list of field locations
+        """
+
         locations = []
 
         for i, field in enumerate(self.fields):
@@ -201,20 +230,16 @@ class SelectClause:
 
         return locations
 
-    def add_field(self, *args):
-        """ docstring tbd """
-        field = self._get_field(*args)
-
-        self.fields.append(field)
-
-    def remove_field(self, *args):
-        """ docstring tbd """
-        field = self._get_field(*args)
-
-        self.fields.remove(field)
-
     def is_equivalent_to(self, other):
-        """ docstring tbd """
+        """Returns equivalence ignoring the sort order of the fields; this is different
+            than checking for equality (__eq__), which considers field order
+        Args:
+            other (SelectClause): Another select clause to compare to
+            
+        Returns:
+            equivalent (bool): Whether the select clauses are logically equivalent
+        """
+
         equivalent = False
 
         if isinstance(other, self.__class__):
@@ -226,6 +251,7 @@ class SelectClause:
         """ docstring tbd """
 
 
+# TODO: Left off here 2022-09-03; continue writing all class-based tests in test_classes
 @dataclass
 class Expression:
     """ docstring tbd """
@@ -1087,6 +1113,7 @@ class Query(DataSet):
     def counts(self):
         """ docstring tbd """
         counts_dict = {}
+        # TODO: Change instances of run().count() to just count()
         query_count = self.run().count()
         counts_dict['query'] = query_count
 
@@ -1112,15 +1139,13 @@ class Query(DataSet):
 
         for join in self.from_clause.joins:
             if join.kind == 'left':
-                dataset_columns = join.dataset.get_columns()
-                column_names = [
-                    col_dict['name'] for col_dict in dataset_columns]
+                column_names = join.dataset.get_column_names()
 
                 for field in self.select_clause.fields:
                     if field.expression in column_names:
                         self.select_clause.remove_field(field)
 
-                        subquery_select_clause = SelectClause([field])
+                        subquery_select_clause = SelectClause(fields=[field])
                         subquery_from_clause = FromClause(
                             from_dataset=join.dataset, db_conn_str=join.dataset.db_conn_str)
                         subquery_where_clause = WhereClause(
@@ -1175,7 +1200,8 @@ class Query(DataSet):
 
     def fuse(self, query):
         """ docstring tbd """
-        # FUTURE: Figure out how to fuse from clauses
+        # FUTURE: Figure out how to fuse from clauses, meaning to merge them, keeping
+        #     tables from both and preserving logic as much as possible
         if self.from_clause == query.from_clause:
             self.select_clause.fuse(query.select_clause)
             self.where_clause.fuse(query.where_clause)
@@ -1245,8 +1271,9 @@ class Field:
                 db_conn_str = kwargs.get('db_conn_str')
 
                 # TODO: Unhardcode this
-                if kwargs['query'].from_clause:
-                    kwargs['query'].from_clause.from_dataset.db_conn_str = db_conn_str
+                if 'query' in kwargs:
+                    if kwargs['query'].from_clause:
+                        kwargs['query'].from_clause.from_dataset.db_conn_str = db_conn_str
 
                 query = kwargs.get('query', Query(expression, db_conn_str))
             else:
@@ -1480,7 +1507,7 @@ def get_dataset(token, db_conn_str=None):
         dataset = Query(sql_str, db_conn_str)
 
     else:
-        dataset = Table(str(token), db_conn_str)
+        dataset = Table(name=str(token), db_conn_str=db_conn_str)
 
     return dataset
 

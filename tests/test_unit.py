@@ -143,7 +143,7 @@ class StringListTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select * from dual where dummy = 'X'"
 
-        expected_select_clause = SelectClause(['select', '*'])
+        expected_select_clause = SelectClause('select *')
         expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
 
@@ -154,7 +154,7 @@ class StringListTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select fld_1 from dual where dummy = 'X'"
 
-        expected_select_clause = SelectClause(['select', ['fld_1']])
+        expected_select_clause = SelectClause('select fld_1')
         expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
 
@@ -165,7 +165,7 @@ class StringListTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
 
-        expected_select_clause = SelectClause(['select', ['fld_1', 'fld_2']])
+        expected_select_clause = SelectClause('select fld_1, fld_2')
         expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
 
@@ -305,7 +305,8 @@ class QueryTestCase(TestCase):
         """ docstring tbd """
         self.sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
                         'from c join d on e = f where g = h and i = j')
-        self.query = Query(self.sql_str)
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        self.query = Query(self.sql_str, db_conn_str)
 
     def test_fields(self):
         """ docstring tbd """
@@ -336,9 +337,10 @@ class QueryTestCase(TestCase):
 
     def test_joins(self):
         """ docstring tbd """
+        db_conn_str = 'sqlite:///sqlpt/college.db'
         join_dict = {
             'kind': 'inner',
-            'dataset': Table(name='d'),
+            'dataset': Table(name='d', db_conn_str=db_conn_str),
             'on_clause': OnClause('on e = f')}
         expected_joins = [Join(**join_dict)]
 
@@ -350,13 +352,14 @@ class QueryTestCase(TestCase):
 
     def test_from_clause(self):
         """ docstring tbd """
+        db_conn_str = 'sqlite:///sqlpt/college.db'
         join_dict = {
             'kind': 'inner',
-            'dataset': Table(name='d'),
+            'dataset': Table(name='d', db_conn_str=db_conn_str),
             'on_clause': OnClause('on e = f')}
         expected_joins = [Join(**join_dict)]
 
-        expected_table = Table(name='c')
+        expected_table = Table(name='c', db_conn_str=db_conn_str)
         expected_from_clause = FromClause(
             from_dataset=expected_table, joins=expected_joins)
         actual_from_clause = self.query.from_clause
@@ -376,7 +379,8 @@ class QueryTestCase(TestCase):
 
     def test_query(self):
         """ docstring tbd """
-        expected_query = Query(self.sql_str)
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        expected_query = Query(self.sql_str, db_conn_str)
         actual_query = self.query
 
         self.assertEqual(actual_query, expected_query)
@@ -584,22 +588,6 @@ class FieldTestCase(TestCase):
         self.assertEqual(field.expression, 'column_name')
         self.assertEqual(field.alias, 'a')
         self.assertEqual(field.query, Query())
-
-
-class SelectClauseTestCase(TestCase):
-    """ docstring tbd """
-    def test_select_clause_str(self):
-        """ docstring tbd """
-        select_clause = SelectClause('select a, b')
-
-        self.assertTrue(select_clause)
-
-    def test_select_clause_list(self):
-        """ docstring tbd """
-        select_clause = SelectClause(['select', 'a', 'b'])
-
-        self.assertTrue(select_clause)
-        self.assertEqual(str(select_clause), 'select a, b')
 
 
 class ComparisonTestCase(TestCase):
