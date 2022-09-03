@@ -26,6 +26,17 @@ class DataSet:
     """ docstring tbd """
     db_conn_str: str
 
+    @property
+    def db_conn(self):
+        """ docstring tbd """
+        # db_conn = create_engine('sqlite:///sqlpt/college.db')
+        if self.db_conn_str:
+            db_conn = create_engine(self.db_conn_str)
+        else:
+            db_conn = None
+
+        return db_conn
+
     def rows_unique(self, field_names):
         """ docstring tbd """
         fields = [Field(field_name) for field_name in field_names]
@@ -40,7 +51,8 @@ class DataSet:
         query = Query(select_clause=select_clause,
                       from_clause=from_clause,
                       group_by_clause=group_by_clause,
-                      having_clause=having_clause)
+                      having_clause=having_clause,
+                      db_conn_str=self.db_conn_str)
 
         unique = not query.rows_exist()
 
@@ -82,7 +94,7 @@ class Table(DataSet):
 
     def count(self):
         """ docstring tbd """
-        query = Query(f'select rowid from {self.name}')
+        query = Query(f'select rowid from {self.name}', self.db_conn_str)
         row_count = query.run().count()
 
         return row_count
@@ -164,6 +176,7 @@ class SelectClause:
 
     def _get_field(self, *args):
         """ docstring tbd """
+        # TODO: Maybe find the failed integration test here?
         if type(args[0]) == str:
             field = Field(args[0])
         elif type(args[0]) == Field:
@@ -419,6 +432,8 @@ class FromClause:
     joins: list
 
     def __init__(self, *args, **kwargs):
+        db_conn_str = None
+
         if len(args) == 1:
             if type(args[0]) == str:
                 sql_str = args[0]
@@ -431,9 +446,10 @@ class FromClause:
         elif len(args) == 2:
             if type(args[0]) == str:
                 sql_str = args[0]
+                db_conn_str = args[1]
+
                 from_clause_token_list = (
                     self._parse_from_clause_from_str(sql_str))
-                db_conn_str = args[1]
 
                 from_dataset, joins = self._parse_from_clause_from_tokens(
                     from_clause_token_list, db_conn_str)
@@ -441,9 +457,11 @@ class FromClause:
         else:
             from_dataset = kwargs.get('from_dataset')
             joins = kwargs.get('joins', [])
+            db_conn_str = kwargs.get('db_conn_str')
 
         self.from_dataset = from_dataset
         self.joins = joins
+        self.db_conn_str = db_conn_str
 
     def __hash__(self):
         return hash(str(self))
@@ -849,6 +867,7 @@ class Query(DataSet):
         where_clause = None
         group_by_clause = None
         having_clause = None
+        db_conn_str = None
 
         s_str = ''
 
@@ -860,7 +879,7 @@ class Query(DataSet):
                 s_str = s_str[1:-1] if s_str[:7] == '(select' else s_str
 
                 select_clause = SelectClause(s_str) or None
-                from_clause = FromClause(s_str) or None
+                from_clause = FromClause(s_str, db_conn_str) or None
                 where_clause = WhereClause(s_str) or None
                 group_by_clause = None
                 having_clause = None
@@ -885,7 +904,7 @@ class Query(DataSet):
         where_clause = kwargs.get('where_clause', where_clause)
         group_by_clause = kwargs.get('group_by_clause', group_by_clause)
         having_clause = kwargs.get('having_clause', having_clause)
-        db_conn_str = kwargs.get('db_conn_str', '')
+        db_conn_str = kwargs.get('db_conn_str', db_conn_str)
 
         self.sql_str = sql_str
         self.select_clause = select_clause
@@ -959,16 +978,6 @@ class Query(DataSet):
 
         return clauses_equal
 
-    @property
-    def db_conn(self):
-        """ docstring tbd """
-        # db_conn = create_engine('sqlite:///sqlpt/college.db')
-        if self.db_conn_str:
-            db_conn = create_engine(self.db_conn_str)
-        else:
-            db_conn = None
-
-        return db_conn
 
     def locate_column(self, s_str):
         """ docstring tbd """
@@ -1111,18 +1120,19 @@ class Query(DataSet):
 
                         subquery_select_clause = SelectClause([field])
                         subquery_from_clause = FromClause(
-                            from_dataset=join.dataset)
+                            from_dataset=join.dataset, db_conn_str=join.dataset.db_conn_str)
                         subquery_where_clause = WhereClause(
                             expression=join.on_clause.expression)
                         subquery = Query(
                             select_clause=subquery_select_clause,
                             from_clause=subquery_from_clause,
-                            where_clause=subquery_where_clause)
+                            where_clause=subquery_where_clause,
+                            db_conn_str=join.dataset.db_conn_str)
 
                         alias = field.alias or field.expression
                         expression = f'({str(subquery)})'
                         subquery_field = Field(
-                            expression=expression, alias=alias, query=subquery)
+                            expression=expression, alias=alias, query=subquery, db_conn_str=join.dataset.db_conn_str)
                         self.select_clause.add_field(subquery_field)
 
                         joins_to_remove.append(join)
@@ -1218,23 +1228,33 @@ class Field:
     query: Query = dataclass_field(repr=False)
 
     def __init__(self, *args, **kwargs):
+        db_conn_str = None
+
         if len(args) == 1:
             if type(args[0]) == str:
                 field_str = args[0]
-                expression, alias, query = parse_field(field_str, 'tuple')
+                expression, alias, query = parse_field(field_str, 'tuple', db_conn_str)
 
         else:
             expression = kwargs.get('expression')
             alias = kwargs.get('alias')
 
             if expression:
-                query = kwargs.get('query', Query(expression))
+                db_conn_str = kwargs.get('db_conn_str')
+
+                # TODO: Unhardcode this
+                if kwargs['query'].from_clause:
+                    kwargs['query'].from_clause.from_dataset.db_conn_str = db_conn_str
+
+                query = kwargs.get('query', Query(expression, db_conn_str))
             else:
                 query = None
+            db_conn_str = kwargs.get('db_conn_str')
 
         self.expression = expression
         self.alias = alias
         self.query = query
+        self.db_conn_str = db_conn_str
 
     def __hash__(self):
         return hash(str(self))
@@ -1485,7 +1505,7 @@ def parse_select_clause(sql_str):
     return fields
 
 
-def parse_field(s_str, return_type='dict'):
+def parse_field(s_str, return_type='dict', db_conn_str=None):
     """ docstring tbd """
     regex = (
         r'(?P<expression>\'?[\w\*]+\'?(?:\([^\)]*\))?|\([^\)]*\))[ ]?(?P<alias>\w*)')  # noqa
@@ -1494,7 +1514,7 @@ def parse_field(s_str, return_type='dict'):
 
     expression = match_obj.group('expression')
     alias = match_obj.group('alias')
-    query = Query(expression)
+    query = Query(expression, db_conn_str)
 
     if return_type == 'dict':
         return_val = {'expression': expression, 'alias': alias, 'query': query}
