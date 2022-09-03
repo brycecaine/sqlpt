@@ -796,9 +796,8 @@ class Comparison:
         return equivalent
 
 
-# TODO: Left off here 2022-09-03; continue writing all class-based tests in test_classes
 class WhereClause(ExpressionClause):
-    """A select clause of a sql query"""
+    """A where clause of a sql query"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -903,28 +902,45 @@ class GroupByClause:
 
 
 class HavingClause(ExpressionClause):
-    """ docstring tbd """
+    """A having clause of a sql query"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.leading_word = 'having'
 
     @staticmethod
-    def parse_having_clause(sql_str):
-        """ docstring tbd """
-        sql_tokens = (
-            remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+    def parse_having_clause(s_str):
+        """Parses and returns a having-clause token list based on the given string
+        
+        Args:
+            s_str (str): A short sql string representing a having clause
 
-        having_clause_token_list = []
+        Returns:
+            token_list (list): A token list
+        """
+
+        sql_tokens = (
+            remove_whitespace(sqlparse.parse(s_str)[0].tokens))
+
+        token_list = []
 
         for sql_token in sql_tokens:
-            having_clause_token_list.append(sql_token)
+            token_list.append(sql_token)
 
-        return having_clause_token_list
+        return token_list
 
-    def parse_expression_clause(self, sql_str):
-        """ docstring tbd """
-        token_list = self.__class__.parse_having_clause(sql_str)
+    def parse_expression_clause(self, s_str):
+        """Returns a having-clause token list based on the given string
+        
+        Args:
+            s_str (str): A short sql string representing a having clause
+
+        Returns:
+            token_list (list): A token list
+        """
+
+        token_list = self.__class__.parse_having_clause(s_str)
 
         return token_list
 
@@ -1380,30 +1396,48 @@ class UpdateClause:
         return update_clause_str
 
 
+# TODO: Left off here...
 @dataclass
 class SetClause(ExpressionClause):
-    """ docstring tbd """
+    """A set clause of an update statement"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.leading_word = 'set'
 
     @staticmethod
-    def parse_set_clause(sql_str):
-        """ docstring tbd """
-        sql_tokens = (
-            remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+    def parse_set_clause(s_str):
+        """Parses and returns a set-clause token list based on the given string
+        
+        Args:
+            s_str (str): A short sql string representing a set clause
 
-        set_clause_token_list = []
+        Returns:
+            token_list (list): A token list
+        """
+
+        sql_tokens = (
+            remove_whitespace(sqlparse.parse(s_str)[0].tokens))
+
+        token_list = []
 
         for sql_token in sql_tokens:
-            set_clause_token_list.append(sql_token)
+            token_list.append(sql_token)
 
-        return set_clause_token_list
+        return token_list
 
-    def parse_expression_clause(self, sql_str):
-        """ docstring tbd """
-        token_list = self.__class__.parse_set_clause(sql_str)
+    def parse_expression_clause(self, s_str):
+        """Returns a set-clause token list based on the given string
+        
+        Args:
+            s_str (str): A short sql string representing a set clause
+
+        Returns:
+            token_list (list): A token list
+        """
+
+        token_list = self.__class__.parse_set_clause(s_str)
 
         return token_list
 
