@@ -36,7 +36,7 @@ class StringTestCase(TestCase):
 
         expected_select_clause = SelectClause('select *')
         expected_from_clause = FromClause('from dual', db_conn_str)
-        expected_where_clause = WhereClause("where dummy = 'X'")
+        expected_where_clause = WhereClause(s_str="where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
                    expected_where_clause)
@@ -49,7 +49,7 @@ class StringTestCase(TestCase):
 
         expected_select_clause = SelectClause('select fld_1')
         expected_from_clause = FromClause('from dual', db_conn_str)
-        expected_where_clause = WhereClause("where dummy = 'X'")
+        expected_where_clause = WhereClause(s_str="where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
                    expected_where_clause)
@@ -62,7 +62,7 @@ class StringTestCase(TestCase):
 
         expected_select_clause = SelectClause('select fld_1, fld_2')
         expected_from_clause = FromClause('from dual', db_conn_str)
-        expected_where_clause = WhereClause("where dummy = 'X'")
+        expected_where_clause = WhereClause(s_str="where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
                    expected_where_clause)
@@ -107,7 +107,7 @@ class StringTestCase(TestCase):
         """ docstring tbd """
         sql_str = "where dummy = 'X'"
 
-        actual_where_clause = str(WhereClause(sql_str))
+        actual_where_clause = str(WhereClause(s_str=sql_str))
         expected_where_clause = sql_str
 
         self.assertEqual(actual_where_clause, expected_where_clause)
@@ -116,7 +116,7 @@ class StringTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
 
-        actual_where_clause = str(WhereClause(sql_str))
+        actual_where_clause = str(WhereClause(s_str=sql_str))
         expected_where_clause = "where dummy = 'X'"
 
         self.assertEqual(actual_where_clause, expected_where_clause)
@@ -145,7 +145,7 @@ class StringListTestCase(TestCase):
 
         expected_select_clause = SelectClause('select *')
         expected_from_clause = FromClause('from dual')
-        expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
+        expected_where_clause = WhereClause(s_str="where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
                    expected_where_clause)
@@ -156,7 +156,7 @@ class StringListTestCase(TestCase):
 
         expected_select_clause = SelectClause('select fld_1')
         expected_from_clause = FromClause('from dual')
-        expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
+        expected_where_clause = WhereClause(s_str="where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
                    expected_where_clause)
@@ -167,7 +167,7 @@ class StringListTestCase(TestCase):
 
         expected_select_clause = SelectClause('select fld_1, fld_2')
         expected_from_clause = FromClause('from dual')
-        expected_where_clause = WhereClause(['where', 'dummy', '=', "'X'"])
+        expected_where_clause = WhereClause(s_str="where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
                    expected_where_clause)
@@ -341,7 +341,7 @@ class QueryTestCase(TestCase):
         join_dict = {
             'kind': 'inner',
             'dataset': Table(name='d', db_conn_str=db_conn_str),
-            'on_clause': OnClause('on e = f')}
+            'on_clause': OnClause(s_str='on e = f')}
         expected_joins = [Join(**join_dict)]
 
         actual_joins = self.query.from_clause.joins
@@ -356,7 +356,7 @@ class QueryTestCase(TestCase):
         join_dict = {
             'kind': 'inner',
             'dataset': Table(name='d', db_conn_str=db_conn_str),
-            'on_clause': OnClause('on e = f')}
+            'on_clause': OnClause(s_str='on e = f')}
         expected_joins = [Join(**join_dict)]
 
         expected_table = Table(name='c', db_conn_str=db_conn_str)
@@ -370,7 +370,7 @@ class QueryTestCase(TestCase):
 
     def test_where_clause(self):
         """ docstring tbd """
-        expected_where_clause = WhereClause('where g = h and i = j')
+        expected_where_clause = WhereClause(s_str='where g = h and i = j')
         actual_where_clause = self.query.where_clause
 
         self.assertEqual(actual_where_clause, expected_where_clause)
@@ -447,8 +447,8 @@ class EquivalenceTestCase(TestCase):
         self.select_clause_1 = SelectClause('select a, b')
         self.select_clause_2 = SelectClause('select b, a')
 
-        self.where_clause_1 = WhereClause('where g = h and i = j')
-        self.where_clause_2 = WhereClause('where h = g and j = i')
+        self.where_clause_1 = WhereClause(s_str='where g = h and i = j')
+        self.where_clause_2 = WhereClause(s_str='where h = g and j = i')
 
     # -------------------------------------------------------------------------
     # Test individual clauses
@@ -608,8 +608,8 @@ class UpdateStatementTestCase(TestCase):
         sql_str = "update student set major = 'BIOL' where id = 4"
 
         update_clause = UpdateClause('update student')
-        set_clause = SetClause("set major = 'BIOL'")
-        where_clause = WhereClause('where id = 4')
+        set_clause = SetClause(s_str="set major = 'BIOL'")
+        where_clause = WhereClause(s_str='where id = 4')
 
         expected_update_statement = UpdateStatement(
             update_clause=update_clause, set_clause=set_clause,
@@ -639,7 +639,7 @@ class DeleteStatementTestCase(TestCase):
 
         delete_clause = DeleteClause()
         from_clause = FromClause('from student')
-        where_clause = WhereClause('where id = 4')
+        where_clause = WhereClause(s_str='where id = 4')
 
         expected_delete_statement = DeleteStatement(
             delete_clause=delete_clause, from_clause=from_clause,
