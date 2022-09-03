@@ -247,9 +247,6 @@ class SelectClause:
 
         return equivalent
 
-    def fuse(self, select_clause):
-        """ docstring tbd """
-
 
 @dataclass
 class Expression:
