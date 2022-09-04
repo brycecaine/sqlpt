@@ -2,8 +2,9 @@ from unittest import TestCase
 
 from sqlalchemy.engine import Engine
 from sqlpt.sql import (Comparison, DataSet, Expression, ExpressionClause,
-                       FromClause, HavingClause, Join, OnClause, QueryResult,
-                       SelectClause, SetClause, Table, WhereClause)
+                       FromClause, HavingClause, Join, OnClause, Query,
+                       QueryResult, SelectClause, SetClause, Table,
+                       WhereClause)
 
 
 class QueryResultTestCase(TestCase):
@@ -40,18 +41,16 @@ class TableTestCase(TestCase):
     def test_table_rows_unique(self):
         table = Table(name='student_section', db_conn_str=self.db_conn_str)
         field_names = ['student_id', 'term_id', 'section_id']
-        actual_uniqueness = table.rows_unique(field_names)
-        expected_uniqueness = True
+        uniqueness = table.rows_unique(field_names)
 
-        self.assertEqual(actual_uniqueness, expected_uniqueness)
+        self.assertTrue(uniqueness)
 
     def test_table_rows_not_unique(self):
         table = Table(name='student_section', db_conn_str=self.db_conn_str)
         field_names = ['term_id']
-        actual_uniqueness = table.rows_unique(field_names)
-        expected_uniqueness = False
+        uniqueness = table.rows_unique(field_names)
 
-        self.assertEqual(actual_uniqueness, expected_uniqueness)
+        self.assertFalse(uniqueness)
 
     def test_table_count(self):
         table = Table(name='student_section', db_conn_str=self.db_conn_str)
@@ -537,11 +536,59 @@ class HavingClauseTestCase(TestCase):
 
 
 class QueryTestCase(TestCase):
+    def test_query_create_with_db_conn_str(self):
+        sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
+                   'from c join d on e = f where g = h and i = j')
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+
+        self.assertTrue(query)
+
+    def test_query_create_without_db_conn_str(self):
+        sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
+                   'from c join d on e = f where g = h and i = j')
+        query = Query(sql_str=sql_str)
+
+        self.assertTrue(query)
+
+    def test_query__optional_clause_equal(self):
+        sql_str_1 = ('select a name, b, fn(id, dob) age, fn(id, height) '
+                     'from c join d on e = f where g = h and i = j')
+        query_1 = Query(sql_str=sql_str_1)
+
+        sql_str_2 = ('select a name, b, fn(id, dob) age, fn(id, height) '
+                     'from c join d on e = f where g = h and i = j')
+        query_2 = Query(sql_str=sql_str_2)
+
+        self.assertEqual(query_1, query_2)
+
     def test_query_rows_unique(self):
-        pass
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str='select * from student_section', db_conn_str=db_conn_str)
+        field_names = ['student_id', 'term_id', 'section_id']
+        uniqueness = query.rows_unique(field_names)
+
+        self.assertTrue(uniqueness)
 
     def test_query_rows_not_unique(self):
-        pass
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str='select * from student_section', db_conn_str=db_conn_str)
+        field_names = ['term_id']
+        uniqueness = query.rows_unique(field_names)
+
+        self.assertFalse(uniqueness)
+
+    def test_query_locate_column(self):
+        query = Query(sql_str='select a, b from student_section')
+
+        location = query.locate_column('b')
+        expected_locations = [('select_clause', 'fields', 1)]
+
+        self.assertEqual(location, expected_locations)
+
+    # TODO: 2022-09-04 Continue testing and docstring'ing the rest of the FromClause methods
+    #     start with delete_node here
+    # TODO: Move QueryTestCase methods from test_unit.py to here
 
 
 # Field
@@ -555,7 +602,7 @@ class QueryTestCase(TestCase):
 # parse_fields
 # parse_fields_from_token_list
 
-# TODO: Convert sql_str to s_str where it makes sense
+# TODO: See if those last module-level functions could be static methods
 
 
 class SetClauseTestCase(TestCase):

@@ -15,7 +15,7 @@ class StringTestCase(TestCase):
               expected_where_clause):
         """ docstring tbd """
 
-        query = Query(sql_str)
+        query = Query(sql_str=sql_str)
 
         expected_query = Query(
             select_clause=expected_select_clause,
@@ -126,7 +126,7 @@ class StringListTestCase(TestCase):
     def _test(self, sql_str, expected_select_clause, expected_from_clause,
               expected_where_clause):
         """ docstring tbd """
-        query = Query(sql_str)
+        query = Query(sql_str=sql_str)
 
         expected_query = Query(
             select_clause=expected_select_clause,
@@ -193,7 +193,7 @@ class ParseTestCase(TestCase):
                and i = j
         '''
 
-        query = Query(sql_str)
+        query = Query(sql_str=sql_str)
         select_subquery = query.select_clause.fields[4].query
         join_subquery = query.from_clause.joins[1].dataset
 
@@ -211,7 +211,7 @@ class ParseTestCase(TestCase):
                 on student.id = student_id
             '''
 
-        query = Query(sql_str)
+        query = Query(sql_str=sql_str)
 
         actual_sql_str = str(query)
         expected_sql_str = service.remove_whitespace_from_str(sql_str)
@@ -225,7 +225,7 @@ class ParseTestCase(TestCase):
               from (select a from tbl)
             '''
 
-        query = Query(sql_str)
+        query = Query(sql_str=sql_str)
 
         actual_sql_str = str(query)
         expected_sql_str = service.remove_whitespace_from_str(sql_str)
@@ -239,7 +239,7 @@ class ParseTestCase(TestCase):
             select id
             '''
 
-        query = Query(sql_str)
+        query = Query(sql_str=sql_str)
 
         actual_sql_str = str(query)
         expected_sql_str = service.remove_whitespace_from_str(sql_str)
@@ -305,7 +305,7 @@ class QueryTestCase(TestCase):
         self.sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
                         'from c join d on e = f where g = h and i = j')
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        self.query = Query(self.sql_str, db_conn_str)
+        self.query = Query(sql_str=self.sql_str, db_conn_str=db_conn_str)
 
     def test_fields(self):
         """ docstring tbd """
@@ -379,7 +379,7 @@ class QueryTestCase(TestCase):
     def test_query(self):
         """ docstring tbd """
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        expected_query = Query(self.sql_str, db_conn_str)
+        expected_query = Query(sql_str=self.sql_str, db_conn_str=db_conn_str)
         actual_query = self.query
 
         self.assertEqual(actual_query, expected_query)
@@ -389,7 +389,7 @@ class QueryTestCase(TestCase):
     def test_query_without_from_clause(self):
         """ docstring tbd """
         sql_str = 'select 1'
-        actual_query = Query(sql_str)
+        actual_query = Query(sql_str=sql_str)
 
         self.assertEqual(str(actual_query), sql_str)
 
@@ -417,11 +417,11 @@ class ComplexQueryTestCase(TestCase):
                and i = j
         '''
 
-        self.query = Query(self.sql_str)
+        self.query = Query(sql_str=self.sql_str)
 
     def test_query(self):
         """ docstring tbd """
-        expected_query = Query(self.sql_str)
+        expected_query = Query(sql_str=self.sql_str)
         actual_query = self.query
 
         self.assertEqual(actual_query, expected_query)
@@ -439,9 +439,9 @@ class EquivalenceTestCase(TestCase):
     def setUp(self):
         """ docstring tbd """
         self.query_1 = Query(
-            'select a, b from c join d on e = f where g = h and i = j')
+            sql_str='select a, b from c join d on e = f where g = h and i = j')
         self.query_2 = Query(
-            'select b, a from d join c on f = e where h = g and j = i')
+            sql_str='select b, a from d join c on f = e where h = g and j = i')
 
         self.select_clause_1 = SelectClause('select a, b')
         self.select_clause_2 = SelectClause('select b, a')
@@ -534,8 +534,8 @@ class ConversionTestCase(TestCase):
                 on student.id = student_id;
             '''
 
-        input_query = Query(input_sql_str)
-        output_query = Query(output_sql_str)
+        input_query = Query(sql_str=input_sql_str)
+        output_query = Query(sql_str=output_sql_str)
 
         # FUTURE: Eventually assertEqual
         self.assertTrue(input_query)

@@ -15,7 +15,7 @@ class ProbingTestCase(TestCase):
         '''
 
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str, db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
 
         actual_counts = query.counts()
 
@@ -35,7 +35,7 @@ class ProbingTestCase(TestCase):
         '''
 
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str, db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
 
         actual_counts = query.counts()
 
@@ -56,7 +56,7 @@ class ProbingTestCase(TestCase):
         '''
 
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str, db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
 
         actual_counts = query.counts()
 
@@ -92,13 +92,13 @@ class ModifyingTestCase(TestCase):
         '''
 
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str_original, db_conn_str)
+        query = Query(sql_str=sql_str_original, db_conn_str=db_conn_str)
 
         actual_scalarized_query = query.scalarize()
         actual_scalarized_query.db_conn_str = db_conn_str
 
         print('baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad')
-        expected_scalarized_query = Query(sql_str_scalarized, db_conn_str)
+        expected_scalarized_query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
         print('baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad')
 
         print(actual_scalarized_query.select_clause.fields[2].query.from_clause.__dict__)
@@ -117,7 +117,7 @@ class ModifyingTestCase(TestCase):
         '''
 
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str_scalarized, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
 
         subquery = query.select_clause.fields[2].query
         subquery.db_conn_str = db_conn_str
@@ -137,7 +137,7 @@ class ModifyingTestCase(TestCase):
         '''
 
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str_scalarized, db_conn_str)
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
 
         self.assertFalse(query.is_leaf())
         self.assertTrue(query.select_clause.fields[2].query.is_leaf())
@@ -152,7 +152,7 @@ class ModifyingTestCase(TestCase):
         '''
 
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str_scalarized, db_conn_str)
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
 
         query.select_clause.fields[2].query.db_conn_str = db_conn_str
 
@@ -171,7 +171,7 @@ class ModifyingTestCase(TestCase):
         '''
 
         db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str_scalarized, db_conn_str)
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
 
         query.select_clause.fields[2].query.db_conn_str = db_conn_str
 

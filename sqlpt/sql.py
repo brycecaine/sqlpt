@@ -96,7 +96,7 @@ class Table(DataSet):
             row_count (int): The table's row count
         """
 
-        query = Query(f'select rowid from {self.name}', self.db_conn_str)
+        query = Query(sql_str=f'select rowid from {self.name}', db_conn_str=self.db_conn_str)
         row_count = query.count()
 
         return row_count
@@ -999,6 +999,10 @@ class HavingClause(ExpressionClause):
         return token_list
 
 
+# TODO: Add suport for insert statements
+
+
+# TODO: Add suport for OrderByClause
 @dataclass
 class Query(DataSet):
     """ docstring tbd """
@@ -1009,53 +1013,21 @@ class Query(DataSet):
     group_by_clause: GroupByClause
     having_clause: HavingClause
 
-    def __init__(self, *args, **kwargs):
-        select_clause = None
-        from_clause = None
-        where_clause = None
-        group_by_clause = None
-        having_clause = None
-        db_conn_str = None
+    def __init__(self, sql_str=None, select_clause=None, from_clause=None,
+                 where_clause=None, group_by_clause=None, having_clause=None,
+                 db_conn_str=None):
 
-        s_str = ''
+        if sql_str:
+            # Accommodate subqueries surrounded by parens
+            sql_str = sql_str[1:-1] if sql_str[:7] == '(select' else sql_str
 
-        if len(args) == 1:
-            if type(args[0]) == str:
-                s_str = args[0]
-
-                # Accommodate subqueries surrounded by parens
-                s_str = s_str[1:-1] if s_str[:7] == '(select' else s_str
-
-                # TODO: Do away with these "or None"s?
-                select_clause = SelectClause(s_str) or None
-                from_clause = FromClause(s_str=s_str, db_conn_str=db_conn_str) or None
-                # TODO: Make sure every class is instantiated with keyword arguments (but don't accept a general kwargs in init in order to be explicit)
-                where_clause = WhereClause(s_str=s_str) or None
-                group_by_clause = None
-                having_clause = None
-
-        elif len(args) == 2:
-            if type(args[0]) == str:
-                s_str = args[0]
-                db_conn_str = args[1]
-
-                # Accommodate subqueries surrounded by parens
-                s_str = s_str[1:-1] if s_str[:7] == '(select' else s_str
-
-                # TODO: Do away with these "or None"s?
-                select_clause = SelectClause(s_str) or None
-                from_clause = FromClause(s_str=s_str, db_conn_str=db_conn_str) or None
-                where_clause = WhereClause(s_str=s_str) or None
-                group_by_clause = None
-                having_clause = None
-
-        sql_str = kwargs.get('sql_str', s_str)
-        select_clause = kwargs.get('select_clause', select_clause)
-        from_clause = kwargs.get('from_clause', from_clause)
-        where_clause = kwargs.get('where_clause', where_clause)
-        group_by_clause = kwargs.get('group_by_clause', group_by_clause)
-        having_clause = kwargs.get('having_clause', having_clause)
-        db_conn_str = kwargs.get('db_conn_str', db_conn_str)
+            # TODO: Do away with these "or None"s?
+            select_clause = SelectClause(sql_str) or None
+            from_clause = FromClause(s_str=sql_str, db_conn_str=db_conn_str) or None
+            # TODO: Make sure every class is instantiated with keyword arguments (but don't accept a general kwargs in init in order to be explicit)
+            where_clause = WhereClause(s_str=sql_str) or None
+            group_by_clause = None
+            having_clause = None
 
         self.sql_str = sql_str
         self.select_clause = select_clause
@@ -1068,6 +1040,7 @@ class Query(DataSet):
     def __hash__(self):
         return hash(str(self))
 
+    # FUTURE: Also implement is_equivalent_to
     def __eq__(self, other):
         query_equal = False
 
@@ -1111,7 +1084,16 @@ class Query(DataSet):
         return string
 
     def _optional_clause_equal(self, other, kind):
-        """ docstring tbd """
+        """Returns whether two optional clauses are equal
+
+        Args:
+            other (Query): Another query to compare clauses against 
+            kind (str): The kind of clause to compare against
+        
+        Returns:
+            clauses_equal (bool): True/False whether the clauses are equal
+        """
+
         clauses_equal = False
 
         self_has_clause = hasattr(self, f'{kind}_clause')
@@ -1130,15 +1112,28 @@ class Query(DataSet):
         return clauses_equal
 
 
+    # TODO: Consider standardizing this to locate_field?
     def locate_column(self, s_str):
-        """ docstring tbd """
-        locations = (
-            self.select_clause.locate_field(s_str) +
-            self.from_clause.locate_field(s_str) +
-            self.where_clause.locate_field(s_str))
+        """Returns a columns's "location" in the query
+        
+        Args:
+            s_str (str): A short sql string representing a column to be located
+            
+        Returns:
+            locations (list): The resulting list of column locations
+        """
+
+        locations = self.select_clause.locate_field(s_str)
+
+        if self.from_clause:
+            locations.extend(self.from_clause.locate_field(s_str))
+
+        if self.where_clause:
+            locations.extend(self.where_clause.locate_field(s_str))
 
         return locations
 
+    # TODO: 2022-09-04 Continue testing and docstring'ing the rest of the FromClause methods
     def delete_node(self, coordinates):
         """ docstring tbd """
         node = self
@@ -1399,7 +1394,7 @@ class Field:
                     if kwargs['query'].from_clause:
                         kwargs['query'].from_clause.from_dataset.db_conn_str = db_conn_str
 
-                query = kwargs.get('query', Query(expression, db_conn_str))
+                query = kwargs.get('query', Query(sql_str=expression, db_conn_str=db_conn_str))
             else:
                 query = None
             db_conn_str = kwargs.get('db_conn_str')
@@ -1644,7 +1639,7 @@ def get_dataset(token, db_conn_str=None):
 
     if type(token) == Parenthesis:
         sql_str = str(token)[1:-1]
-        dataset = Query(sql_str, db_conn_str)
+        dataset = Query(sql_str=sql_str, db_conn_str=db_conn_str)
 
     else:
         dataset = Table(name=str(token), db_conn_str=db_conn_str)
@@ -1683,7 +1678,7 @@ def parse_field(s_str, return_type='dict', db_conn_str=None):
 
     expression = match_obj.group('expression')
     alias = match_obj.group('alias')
-    query = Query(expression, db_conn_str)
+    query = Query(sql_str=expression, db_conn_str=db_conn_str)
 
     if return_type == 'dict':
         return_val = {'expression': expression, 'alias': alias, 'query': query}
