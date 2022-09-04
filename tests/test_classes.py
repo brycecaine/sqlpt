@@ -1,7 +1,9 @@
 from unittest import TestCase
 
 from sqlalchemy.engine import Engine
-from sqlpt.sql import DataSet, Expression, SelectClause, Table, OnClause, ExpressionClause, WhereClause, HavingClause, SetClause, QueryResult, Join
+from sqlpt.sql import (DataSet, Expression, ExpressionClause, FromClause,
+                       HavingClause, Join, OnClause, QueryResult, SelectClause,
+                       SetClause, Table, WhereClause)
 
 
 class QueryResultTestCase(TestCase):
@@ -13,30 +15,10 @@ class QueryResultTestCase(TestCase):
 
 
 class DataSetTestCase(TestCase):
-    def setUp(self):
-        super().setUp()
-
-        self.db_conn_str = 'sqlite:///sqlpt/college.db'
-
     def test_dataset_create(self):
-        dataset = DataSet(self.db_conn_str)
+        dataset = DataSet()
 
-        self.assertEqual(dataset.db_conn_str, self.db_conn_str)
-
-    def test_dataset_db_conn_exists(self):
-        dataset = DataSet(self.db_conn_str)
-
-        self.assertEqual(type(dataset.db_conn), Engine)
-
-    def test_dataset_db_conn_none(self):
-        with self.assertRaises(TypeError):
-            DataSet()
-
-    def test_dataset_rows_unique(self):
-        dataset = DataSet(self.db_conn_str)
-
-        with self.assertRaises(Exception):
-            dataset.rows_unique(['a'])
+        self.assertTrue(dataset)
 
 
 class TableTestCase(TestCase):
@@ -49,6 +31,11 @@ class TableTestCase(TestCase):
         table = Table(name='student_section', db_conn_str=self.db_conn_str)
 
         self.assertEqual(table.name, 'student_section')
+
+    def test_table_db_conn_exists(self):
+        table = Table(name='student_section', db_conn_str=self.db_conn_str)
+
+        self.assertEqual(type(table.db_conn), Engine)
 
     def test_table_rows_unique(self):
         table = Table(name='student_section', db_conn_str=self.db_conn_str)
@@ -343,9 +330,97 @@ class JoinTestCase(TestCase):
 
 
 class FromClauseTestCase(TestCase):
-    def test_join_clause_create(self):
-        # TODO: Come back to this after testing all expression clause types
-        pass
+    def test_from_clause_create_s_str(self):
+        from_clause = FromClause(s_str='from a left join b on c = d')
+
+        self.assertTrue(from_clause)
+
+    def test_from_clause_create_from_dataset_joins(self):
+        dataset_1 = Table(name='a')
+        dataset_2 = Table(name='b')
+        on_clause = OnClause('c = d')
+        join = Join(kind='left', dataset=dataset_2, on_clause=on_clause)
+        joins = [join]
+        from_clause = FromClause(from_dataset=dataset_1, joins=joins)
+
+        self.assertTrue(from_clause)
+
+    def test__parse_from_clause_from_str(self):
+        s_str = 'from a left join b on c = d'
+        token_list = FromClause._parse_from_clause_from_str(s_str)
+
+        self.assertEqual(type(token_list), list)
+
+    def test__parse_from_clause_from_tokens(self):
+        s_str = 'from a left join b on c = d'
+        token_list = FromClause._parse_from_clause_from_str(s_str)
+        from_dataset, joins = FromClause._parse_from_clause_from_tokens(token_list)
+
+        self.assertEqual(type(from_dataset), Table)
+        self.assertEqual(type(joins), list)
+
+    def test_from_clause_is_equivalent_to(self):
+        dataset_1 = Table(name='a')
+        dataset_2 = Table(name='b')
+
+        on_clause_1 = OnClause('c = d')
+        join_1 = Join(kind='left', dataset=dataset_2, on_clause=on_clause_1)
+        joins_1 = [join_1]
+
+        on_clause_2 = OnClause('d = c')
+        join_2 = Join(kind='left', dataset=dataset_2, on_clause=on_clause_2)
+        joins_2 = [join_2]
+
+        from_clause_1 = FromClause(from_dataset=dataset_1, joins=joins_1)
+        from_clause_2 = FromClause(from_dataset=dataset_1, joins=joins_2)
+
+        self.assertTrue(from_clause_1.is_equivalent_to(from_clause_2))
+
+    def test_from_clause_first_join_dataset(self):
+        dataset_1 = Table(name='a')
+        dataset_2 = Table(name='b')
+        on_clause = OnClause('c = d')
+        join = Join(kind='inner', dataset=dataset_2, on_clause=on_clause)
+        joins = [join]
+        from_clause = FromClause(from_dataset=dataset_1, joins=joins)
+
+        first_join_dataset = from_clause.get_first_join_dataset()
+
+        self.assertEqual(first_join_dataset, dataset_2)
+
+    def test_from_clause_locate_field(self):
+        dataset_1 = Table(name='a')
+        dataset_2 = Table(name='b')
+        on_clause = OnClause('c = d')
+        join = Join(kind='inner', dataset=dataset_2, on_clause=on_clause)
+        joins = [join]
+        from_clause = FromClause(from_dataset=dataset_1, joins=joins)
+
+        location = from_clause.locate_field('c')
+        expected_locations = [
+            ('from_clause',
+             'joins',
+             0,
+             'on_clause',
+             'expression',
+             'comparisons',
+             0,
+             'left_term')
+        ]
+
+        self.assertEqual(location, expected_locations)
+
+    def test_from_clause_locate_field(self):
+        dataset_1 = Table(name='a')
+        dataset_2 = Table(name='b')
+        on_clause = OnClause('c = d')
+        join = Join(kind='inner', dataset=dataset_2, on_clause=on_clause)
+        joins = [join]
+        from_clause = FromClause(from_dataset=dataset_1, joins=joins)
+
+        from_clause.remove_join(join)
+
+        self.assertEqual(str(from_clause), 'from a')
 
 
 class ComparisonTestCase(TestCase):
@@ -388,7 +463,7 @@ class WhereClauseTestCase(TestCase):
 
         self.assertTrue(expression)
 
-    def test_where_locate_field(self):
+    def test_where_clause_locate_field(self):
         where_clause = WhereClause(s_str='where a = b and c = d')
 
         location_a = where_clause.locate_field('a')

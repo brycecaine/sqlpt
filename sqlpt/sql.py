@@ -25,8 +25,6 @@ class QueryResult(list):
 class DataSet:
     """An abstract dataset; can be a table or query"""
 
-    db_conn_str: str
-
     @property
     def db_conn(self):
         """Returns the database connection engine based on a connection string
@@ -81,6 +79,7 @@ class Table(DataSet):
     """A database table"""
 
     name: str
+    db_conn_str: str = None
 
     def __hash__(self):
         return hash(str(self))
@@ -479,6 +478,7 @@ class Join:
     def is_equivalent_to(self, other):
         """Returns equivalence of the join logic; this is different than checking
             for equality (__eq__)
+
         Args:
             other (Join): Another join to compare to
             
@@ -495,43 +495,24 @@ class Join:
         return equivalent
 
 
+# TODO: Align the dataclass attributes with what's in __init__ in all methods
 @dataclass
 class FromClause:
     """ docstring tbd """
     from_dataset: DataSet
     joins: list
 
-    def __init__(self, *args, **kwargs):
-        db_conn_str = None
+    # Can either have s_str and optional db_conn_str, or from_dataset and joins
+    # TODO: Raise exception if args aren't passed in properly (do this for other methods too)
+    def __init__(self, s_str=None, from_dataset=None, joins=None, db_conn_str=None):
+        if s_str:
+            token_list = self._parse_from_clause_from_str(s_str)
 
-        if len(args) == 1:
-            if type(args[0]) == str:
-                sql_str = args[0]
-                from_clause_token_list = (
-                    self._parse_from_clause_from_str(sql_str))
-
-                from_dataset, joins = self._parse_from_clause_from_tokens(
-                    from_clause_token_list)
-
-        elif len(args) == 2:
-            if type(args[0]) == str:
-                sql_str = args[0]
-                db_conn_str = args[1]
-
-                from_clause_token_list = (
-                    self._parse_from_clause_from_str(sql_str))
-
-                from_dataset, joins = self._parse_from_clause_from_tokens(
-                    from_clause_token_list, db_conn_str)
-
-        else:
-            from_dataset = kwargs.get('from_dataset')
-            joins = kwargs.get('joins', [])
-            db_conn_str = kwargs.get('db_conn_str')
+            from_dataset, joins = self._parse_from_clause_from_tokens(
+                token_list, db_conn_str)
 
         self.from_dataset = from_dataset
-        self.joins = joins
-        self.db_conn_str = db_conn_str
+        self.joins = joins or []
 
     def __hash__(self):
         return hash(str(self))
@@ -559,12 +540,20 @@ class FromClause:
 
         return from_clause_str
 
-    def _parse_from_clause_from_str(self, sql_str):
-        """ docstring tbd """
-        sql_tokens = (
-            remove_whitespace(sqlparse.parse(sql_str)[0].tokens))
+    @staticmethod
+    def _parse_from_clause_from_str(s_str):
+        """Parses and returns a from-clause token list based on the given string
+        
+        Args:
+            s_str (str): A short sql string representing a from clause
 
-        from_clause_token_list = []
+        Returns:
+            token_list (list): A token list
+        """
+
+        sql_tokens = remove_whitespace(sqlparse.parse(s_str)[0].tokens)
+
+        token_list = []
 
         start_appending = False
 
@@ -577,12 +566,21 @@ class FromClause:
                 break
 
             if start_appending:
-                from_clause_token_list.append(sql_token)
+                token_list.append(sql_token)
 
-        return from_clause_token_list
+        return token_list
 
-    def _parse_from_clause_from_tokens(self, token_list, db_conn_str=None):
-        """ docstring tbd """
+    @staticmethod
+    def _parse_from_clause_from_tokens(token_list, db_conn_str=None):
+        """Parses and returns a from-dataset and joins based on the given token_list
+        
+        Args:
+            s_str (str): A short sql string representing a from clause
+
+        Returns:
+            token_list (list): A token list
+        """
+
         from_dataset = None
         joins = []
 
@@ -642,7 +640,16 @@ class FromClause:
         return from_dataset, joins
 
     def is_equivalent_to(self, other):
-        """ docstring tbd """
+        """Returns equivalence of the from-clause logic; this is different than checking
+            for equality (__eq__)
+
+        Args:
+            other (FromClause): Another from clause to compare to
+            
+        Returns:
+            equivalent (bool): Whether the from clauses are logically equivalent
+        """
+
         equivalent = False
 
         if isinstance(other, self.__class__):
@@ -650,9 +657,9 @@ class FromClause:
             # of order
             equivalent = (self.from_dataset == other.from_dataset
                           or
-                          (self.from_dataset == other.first_join_dataset()
+                          (self.from_dataset == other.get_first_join_dataset()
                            and
-                           other.from_dataset == self.first_join_dataset()))
+                           other.from_dataset == self.get_first_join_dataset()))
 
             # FUTURE: Work this out
             if equivalent:
@@ -670,11 +677,17 @@ class FromClause:
 
         return equivalent
 
-    def first_join_dataset(self):
-        """ docstring tbd """
+    def get_first_join_dataset(self):
+        """Returns the first join's dataset for inner joins but None for left/right
+            joins
+
+        Returns:
+            first_join_dataset (DataSet): The first join's dataset
+        """
+
         first_join = self.joins[0]
 
-        if first_join.kind == 'join':
+        if first_join.kind in ('inner', 'join'):
             first_join_dataset = first_join.dataset
         else:
             first_join_dataset = None
@@ -682,7 +695,24 @@ class FromClause:
         return first_join_dataset
 
     def locate_field(self, s_str):
-        """ docstring tbd """
+        """Returns a field's "location" in the where clause
+        
+        Args:
+            s_str (str): A short sql string representing a field to be located
+            
+        Returns:
+            locations (list): The resulting list of field locations
+        """
+
+        """Returns a from clause's "location" in the sql query
+        
+        Args:
+            s_str (str): A short sql string representing a from clause to be located
+            
+        Returns:
+            locations (list): The resulting list of field locations
+        """
+
         locations = []
 
         for i, join in enumerate(self.joins):
@@ -704,7 +734,15 @@ class FromClause:
         return locations
 
     def remove_join(self, join):
-        """ docstring tbd """
+        """Removes a join from the from clause
+        
+        Args:
+            join (Join): A join
+        
+        Returns:
+            None
+        """
+
         self.joins.remove(join)
 
 
@@ -819,8 +857,9 @@ class WhereClause(ExpressionClause):
     def __init__(self, s_str=None, expression=None, token_list=None):
         super().__init__(s_str=s_str, leading_word='where', expression=expression, token_list=token_list)
 
+    # TODO: Test this in test_classes
     @staticmethod
-    def parse_where_clause(s_str):
+    def _parse_where_clause(s_str):
         """Parses and returns a where-clause token list based on the given string
         
         Args:
@@ -850,6 +889,7 @@ class WhereClause(ExpressionClause):
 
         return token_list
 
+    # TODO: Test this in test_classes
     def parse_expression_clause(self, sql_str):
         """Returns a where-clause token list based on the given string
         
@@ -860,7 +900,8 @@ class WhereClause(ExpressionClause):
             token_list (list): A token list
         """
 
-        token_list = self.__class__.parse_where_clause(sql_str)
+        # TODO: Make sure all staticmethods are called as self. rather than self.__class__.
+        token_list = self._parse_where_clause(sql_str)
 
         return token_list
 
@@ -986,8 +1027,9 @@ class Query(DataSet):
                 # Accommodate subqueries surrounded by parens
                 s_str = s_str[1:-1] if s_str[:7] == '(select' else s_str
 
+                # TODO: Do away with these "or None"s?
                 select_clause = SelectClause(s_str) or None
-                from_clause = FromClause(s_str, db_conn_str) or None
+                from_clause = FromClause(s_str=s_str, db_conn_str=db_conn_str) or None
                 # TODO: Make sure every class is instantiated with keyword arguments (but don't accept a general kwargs in init in order to be explicit)
                 where_clause = WhereClause(s_str=s_str) or None
                 group_by_clause = None
@@ -1001,8 +1043,9 @@ class Query(DataSet):
                 # Accommodate subqueries surrounded by parens
                 s_str = s_str[1:-1] if s_str[:7] == '(select' else s_str
 
+                # TODO: Do away with these "or None"s?
                 select_clause = SelectClause(s_str) or None
-                from_clause = FromClause(s_str, db_conn_str) or None
+                from_clause = FromClause(s_str=s_str, db_conn_str=db_conn_str) or None
                 where_clause = WhereClause(s_str=s_str) or None
                 group_by_clause = None
                 having_clause = None

@@ -15,8 +15,7 @@ class StringTestCase(TestCase):
               expected_where_clause):
         """ docstring tbd """
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str, db_conn_str)
+        query = Query(sql_str)
 
         expected_query = Query(
             select_clause=expected_select_clause,
@@ -35,7 +34,7 @@ class StringTestCase(TestCase):
         db_conn_str = 'sqlite:///sqlpt/college.db'
 
         expected_select_clause = SelectClause('select *')
-        expected_from_clause = FromClause('from dual', db_conn_str)
+        expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(s_str="where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
@@ -48,7 +47,7 @@ class StringTestCase(TestCase):
         db_conn_str = 'sqlite:///sqlpt/college.db'
 
         expected_select_clause = SelectClause('select fld_1')
-        expected_from_clause = FromClause('from dual', db_conn_str)
+        expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(s_str="where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
@@ -61,7 +60,7 @@ class StringTestCase(TestCase):
         db_conn_str = 'sqlite:///sqlpt/college.db'
 
         expected_select_clause = SelectClause('select fld_1, fld_2')
-        expected_from_clause = FromClause('from dual', db_conn_str)
+        expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(s_str="where dummy = 'X'")
 
         self._test(sql_str, expected_select_clause, expected_from_clause,
