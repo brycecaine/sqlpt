@@ -593,7 +593,7 @@ class ComparisonTestCase(TestCase):
     """ docstring tbd """
     def test_basic(self):
         """ docstring tbd """
-        comparison = Comparison('a = b')
+        comparison = Comparison(s_str='a = b')
 
         self.assertEqual(comparison.bool_conjunction, '')
         self.assertEqual(comparison.bool_sign, '')

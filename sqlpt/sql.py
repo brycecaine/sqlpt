@@ -291,7 +291,7 @@ class Expression:
                     comparison_token_list = []
 
             for comparison_token_list in comparison_token_lists:
-                comparison = Comparison(comparison_token_list)
+                comparison = Comparison(token_list=comparison_token_list)
                 comparisons.append(comparison)
 
         self.comparisons = comparisons
@@ -755,59 +755,49 @@ class Comparison:
     operator: str
     right_term: str
 
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1:
-            if type(args[0]) == str:
-                comparison_str = args[0]
-                statement = sqlparse.parse(comparison_str)
-                sqlparse_comparison = statement[0].tokens[0]
-                comparison_tokens = (
-                    remove_whitespace(sqlparse_comparison.tokens))
+    def __init__(self, s_str=None, token_list=None, left_term=None, operator=None, right_term=None):
+        if s_str:
+            statement = sqlparse.parse(s_str)
+            sqlparse_comparison = statement[0].tokens[0]
+            comparison_tokens = (
+                remove_whitespace(sqlparse_comparison.tokens))
 
-                elements = [comparison_token.value
-                            for comparison_token in comparison_tokens]
+            elements = [comparison_token.value
+                        for comparison_token in comparison_tokens]
 
-            # FUTURE: De-support list arg
-            elif type(args[0]) == list:
-                sqlparse_comparison = args[0][0]
+        # FUTURE: De-support token_list arg?
+        elif token_list:
+            sqlparse_comparison = token_list[0]
 
-                elements = []
+            elements = []
 
-                for sqlparse_comparison in args[0]:
-                    if type(sqlparse_comparison) != SqlParseComparison:
-                        elements.append(sqlparse_comparison.value)
+            for sqlparse_comparison in token_list:
+                if type(sqlparse_comparison) == SqlParseComparison:
+                    comparison_tokens = remove_whitespace(sqlparse_comparison.tokens)
 
-                    elif type(sqlparse_comparison) == SqlParseComparison:
-                        comparison_tokens = (
-                            remove_whitespace(sqlparse_comparison.tokens))
+                    els = [comparison_token.value
+                           for comparison_token in comparison_tokens]
 
-                        els = [comparison_token.value
-                               for comparison_token in comparison_tokens]
+                    elements.extend(els)
 
-                        elements.extend(els)
+                else:
+                    elements.append(sqlparse_comparison.value)
 
-            if elements[0] in ('and', 'or'):
-                bool_conjunction = elements.pop(0)
-            elif elements[0] == 'not':
-                bool_sign = elements.pop(0)
-            else:
-                bool_conjunction = ''
-
-            if elements[0] == 'not':
-                bool_sign = elements.pop(0)
-            else:
-                bool_sign = ''
-
-            left_term = elements[0]
-            operator = elements[1]
-            right_term = elements[2]
-
+        if elements[0] in ('and', 'or'):
+            bool_conjunction = elements.pop(0)
+        elif elements[0] == 'not':
+            bool_sign = elements.pop(0)
         else:
-            bool_conjunction = kwargs.get('bool_conjunction')
-            bool_sign = kwargs.get('bool_sign')
-            left_term = kwargs.get('left_term')
-            operator = kwargs.get('operator')
-            right_term = kwargs.get('right_term')
+            bool_conjunction = ''
+
+        if elements[0] == 'not':
+            bool_sign = elements.pop(0)
+        else:
+            bool_sign = ''
+
+        left_term = left_term or elements[0]
+        operator = operator or elements[1]
+        right_term = right_term or elements[2]
 
         self.bool_conjunction = bool_conjunction
         self.bool_sign = bool_sign
@@ -834,7 +824,16 @@ class Comparison:
         return string
 
     def is_equivalent_to(self, other):
-        """ docstring tbd """
+        """Returns equivalence of the comparison logic; this is different than checking
+            for equality (__eq__)
+
+        Args:
+            other (Comparison): Another comparison to compare to
+            
+        Returns:
+            equivalent (bool): Whether the comparisons are logically equivalent
+        """
+
         equivalent = False
 
         if isinstance(other, self.__class__):

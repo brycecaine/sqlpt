@@ -1,9 +1,9 @@
 from unittest import TestCase
 
 from sqlalchemy.engine import Engine
-from sqlpt.sql import (DataSet, Expression, ExpressionClause, FromClause,
-                       HavingClause, Join, OnClause, QueryResult, SelectClause,
-                       SetClause, Table, WhereClause)
+from sqlpt.sql import (Comparison, DataSet, Expression, ExpressionClause,
+                       FromClause, HavingClause, Join, OnClause, QueryResult,
+                       SelectClause, SetClause, Table, WhereClause)
 
 
 class QueryResultTestCase(TestCase):
@@ -424,9 +424,20 @@ class FromClauseTestCase(TestCase):
 
 
 class ComparisonTestCase(TestCase):
-    def test_join_clause_create(self):
-        # TODO: Come back to this after testing all expression clause types
-        pass
+    def test_comparison_create(self):
+        comparison = Comparison(s_str='a = b')
+
+        self.assertEqual(comparison.bool_conjunction, '')
+        self.assertEqual(comparison.bool_sign, '')
+        self.assertEqual(comparison.left_term, 'a')
+        self.assertEqual(comparison.operator, '=')
+        self.assertEqual(comparison.right_term, 'b')
+
+    def test_comparison_is_equivalent_to(self):
+        comparison_1 = Comparison(s_str='a = b')
+        comparison_2 = Comparison(s_str='b = a')
+
+        self.assertTrue(comparison_1.is_equivalent_to(comparison_2))
 
 
 class WhereClauseTestCase(TestCase):
