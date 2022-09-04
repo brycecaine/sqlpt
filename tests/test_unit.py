@@ -348,7 +348,7 @@ class QueryTestCase(TestCase):
 
         self.assertEqual(actual_joins, expected_joins)
 
-        self.assertEqual(str(actual_joins[0]), ' join d on e = f')
+        self.assertEqual(str(actual_joins[0]), 'join d on e = f')
 
     def test_from_clause(self):
         """ docstring tbd """

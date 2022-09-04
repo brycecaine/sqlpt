@@ -126,6 +126,24 @@ class Table(DataSet):
 
         return column_names
 
+    def is_equivalent_to(self, other):
+        """Returns equivalence of the tables; this is different
+            than checking for equality (__eq__)
+
+        Args:
+            other (Table): Another table to compare to
+            
+        Returns:
+            equivalent (bool): Whether the table are logically equivalent
+        """
+
+        equivalent = False
+
+        if isinstance(other, self.__class__):
+            equivalent = self.name == other.name
+
+        return equivalent
+
 
 @dataclass
 class SelectClause:
@@ -416,6 +434,7 @@ class OnClause(ExpressionClause):
         return token_list
 
 
+# TODO: Change to JoinClause for consistency
 @dataclass
 class Join:
     """ docstring tbd """
@@ -423,16 +442,10 @@ class Join:
     dataset: DataSet
     on_clause: OnClause
 
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1:
-            if type(args[0]) == str:
-                # FUTURE: Implement this
-                pass
-
-        else:
-            kind = kwargs.get('kind')
-            dataset = kwargs.get('dataset')
-            on_clause = kwargs.get('on_clause')
+    def __init__(self, s_str=None, kind=None, dataset=None, on_clause=None):
+        if s_str:
+            # FUTURE: Implement this
+            pass
 
         self.kind = kind
         self.dataset = dataset
@@ -447,22 +460,35 @@ class Join:
         else:
             dataset_str = self.dataset
 
-        join_str = f' {self.kind_str} {dataset_str} {self.on_clause}'
+        join_str = f'{self.simple_kind} {dataset_str} {self.on_clause}'
 
         return join_str
 
     @property
-    def kind_str(self):
-        """ docstring tbd """
-        join_prefix = 'join' if self.kind == 'inner' else f'{self.kind} join'
+    def simple_kind(self):
+        """Returns a simplified join kind (inner join to just join, or left/right join)
+        
+        Returns:
+            kind (str): The simplified join kind
+        """
 
-        return join_prefix
+        kind = 'join' if self.kind == 'inner' else f'{self.kind} join'
+
+        return kind
 
     def is_equivalent_to(self, other):
-        """ docstring tbd """
+        """Returns equivalence of the join logic; this is different than checking
+            for equality (__eq__)
+        Args:
+            other (Join): Another join to compare to
+            
+        Returns:
+            equivalent (bool): Whether the joins are logically equivalent
+        """
+
         equivalent = (self.kind == other.kind
                       and
-                      is_equivalent([self.dataset], [other.dataset])
+                      self.dataset.is_equivalent_to(other.dataset)
                       and
                       self.on_clause.is_equivalent_to(other.on_clause))
 
@@ -529,7 +555,7 @@ class FromClause:
             from_clause_str = f'from {dataset_str}'
 
             for join in self.joins:
-                from_clause_str += f'{join}'
+                from_clause_str += f' {join}'
 
         return from_clause_str
 
@@ -1300,6 +1326,8 @@ class Query(DataSet):
             left_term=subquery_str, operator=operator, right_term=value)
 
         self.where_clause.add_comparison(comparison)
+
+    # TODO: Make a query.is_equivalent_to instance method
 
 
 @dataclass

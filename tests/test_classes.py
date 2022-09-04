@@ -1,9 +1,15 @@
 from unittest import TestCase
 
 from sqlalchemy.engine import Engine
-from sqlpt.sql import DataSet, Expression, SelectClause, Table, OnClause, ExpressionClause, WhereClause, HavingClause, SetClause
+from sqlpt.sql import DataSet, Expression, SelectClause, Table, OnClause, ExpressionClause, WhereClause, HavingClause, SetClause, QueryResult, Join
 
-# QueryResult
+
+class QueryResultTestCase(TestCase):
+    def test_query_result_create(self):
+        query_result = QueryResult()
+        query_result.append('a')
+
+        self.assertEqual(query_result.count(), 1)
 
 
 class DataSetTestCase(TestCase):
@@ -218,14 +224,6 @@ class ExpressionTestCase(TestCase):
         self.assertEqual(str(comparison_1), 'or not c = d')
 
 
-class QueryTestCase(TestCase):
-    def test_query_rows_unique(self):
-        pass
-
-    def test_query_rows_not_unique(self):
-        pass
-
-
 class ExpressionClauseTestCase(TestCase):
     def test_expression_clause_create(self):
         expression = Expression(s_str='a = b')
@@ -299,9 +297,49 @@ class OnClauseTestCase(TestCase):
 
 
 class JoinTestCase(TestCase):
-    def test_join_clause_create(self):
-        # TODO: Come back to this after testing all expression clause types
-        pass
+    def test_join_create(self):
+        on_clause = OnClause('b = c')
+        join = Join(kind='left', dataset='a', on_clause=on_clause)
+
+        self.assertTrue(join)
+
+    def test_join_simple_kind(self):
+        on_clause = OnClause('b = c')
+
+        join = Join(kind='inner', dataset='a', on_clause=on_clause)
+        self.assertEqual(join.simple_kind, 'join')
+
+        join = Join(kind='left', dataset='a', on_clause=on_clause)
+        self.assertEqual(join.simple_kind, 'left join')
+
+        join = Join(kind='right', dataset='a', on_clause=on_clause)
+        self.assertEqual(join.simple_kind, 'right join')
+
+    def test_join_kind(self):
+        on_clause = OnClause('b = c')
+
+        join = Join(kind='inner', dataset='a', on_clause=on_clause)
+        self.assertEqual(str(join).split(' ')[0], 'join')
+
+        join = Join(kind='left', dataset='a', on_clause=on_clause)
+        self.assertEqual(str(join).split(' ')[0], 'left')
+
+        join = Join(kind='right', dataset='a', on_clause=on_clause)
+        self.assertEqual(str(join).split(' ')[0], 'right')
+
+    def test_join_is_equivalent_to(self):
+        # TODO: Put this db defintion in a central place
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        # TODO: Allow all classes to accept a single s_str argument or keyword args
+        dataset = Table(name='a', db_conn_str=db_conn_str)
+
+        on_clause_1 = OnClause('b = c')
+        join_1 = Join(kind='left', dataset=dataset, on_clause=on_clause_1)
+
+        on_clause_2 = OnClause('c = b')
+        join_2 = Join(kind='left', dataset=dataset, on_clause=on_clause_2)
+
+        self.assertTrue(join_1.is_equivalent_to(join_2))
 
 
 class FromClauseTestCase(TestCase):
@@ -411,7 +449,15 @@ class HavingClauseTestCase(TestCase):
 
         self.assertTrue(expression)
 
-# Query
+
+class QueryTestCase(TestCase):
+    def test_query_rows_unique(self):
+        pass
+
+    def test_query_rows_not_unique(self):
+        pass
+
+
 # Field
 # UpdateClause
 # UpdateStatement
@@ -443,7 +489,6 @@ class SetClauseTestCase(TestCase):
         s_str_1 = 'a = b'
         expression_1 = Expression(s_str=s_str_1)
         set_clause_1 = SetClause(expression=expression_1)
-        print(set_clause_1)
 
         s_str_2 = 'b = a'
         expression_2 = Expression(s_str=s_str_2)
