@@ -589,17 +589,6 @@ class FieldTestCase(TestCase):
         self.assertEqual(field.query, Query())
 
 
-class ComparisonTestCase(TestCase):
-    """ docstring tbd """
-    def test_basic(self):
-        """ docstring tbd """
-        comparison = Comparison(s_str='a = b')
-
-        self.assertEqual(comparison.bool_conjunction, '')
-        self.assertEqual(comparison.bool_sign, '')
-        self.assertEqual(str(comparison), 'a = b')
-
-
 class UpdateStatementTestCase(TestCase):
     """ docstring tbd """
     def test_update_statement_basic(self):
