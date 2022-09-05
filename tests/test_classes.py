@@ -1,10 +1,11 @@
 from unittest import TestCase
 
 from sqlalchemy.engine import Engine
-from sqlpt.sql import (Comparison, DataSet, Expression, ExpressionClause,
-                       Field, FromClause, HavingClause, Join, OnClause, Query,
-                       QueryResult, SelectClause, SetClause, Table,
-                       WhereClause)
+from sqlpt.sql import (Comparison, DataSet, DeleteClause, DeleteStatement,
+                       Expression, ExpressionClause, Field, FromClause,
+                       HavingClause, Join, OnClause, Query, QueryResult,
+                       SelectClause, SetClause, Table, UpdateClause,
+                       UpdateStatement, WhereClause)
 
 
 class QueryResultTestCase(TestCase):
@@ -844,9 +845,7 @@ class QueryTestCase(TestCase):
 
 
 class FieldTestCase(TestCase):
-    """ docstring tbd """
     def test_field_str_normal(self):
-        """ docstring tbd """
         field = Field('exp a')
 
         self.assertTrue(field)
@@ -854,7 +853,6 @@ class FieldTestCase(TestCase):
         self.assertEqual(field.alias, 'a')
 
     def test_field_list_normal(self):
-        """ docstring tbd """
         field = Field('exp a')
 
         self.assertTrue(field)
@@ -862,7 +860,6 @@ class FieldTestCase(TestCase):
         self.assertEqual(field.alias, 'a')
 
     def test_field_str_subquery(self):
-        """ docstring tbd """
         field = Field('(select fld from tbl) a')
 
         self.assertTrue(field)
@@ -871,7 +868,6 @@ class FieldTestCase(TestCase):
         self.assertEqual(type(field.query), Query)
 
     def test_field_list_subquery(self):
-        """ docstring tbd """
         field = Field('(select fld from tbl) a')
 
         self.assertTrue(field)
@@ -880,7 +876,6 @@ class FieldTestCase(TestCase):
         self.assertEqual(type(field.query), Query)
 
     def test_field_no_subquery(self):
-        """ docstring tbd """
         field = Field('column_name a')
 
         self.assertTrue(field)
@@ -889,17 +884,7 @@ class FieldTestCase(TestCase):
         self.assertEqual(field.query, Query())
 
 
-# UpdateClause
-# UpdateStatement
-# DeleteClause
-# DeleteStatement
-# get_dataset
-# parse_select_clause
-# parse_field
-# parse_fields
-# parse_fields_from_token_list
-
-# TODO: See if those last module-level functions could be static methods
+# TODO: Test UpdateClause
 
 
 class SetClauseTestCase(TestCase):
@@ -935,3 +920,69 @@ class SetClauseTestCase(TestCase):
         expression = ExpressionClause.get_expression_clause_parts(set_clause_token_list)
 
         self.assertTrue(expression)
+
+
+class UpdateStatementTestCase(TestCase):
+    def test_update_statement_basic(self):
+        sql_str = "update student set major = 'BIOL' where id = 4"
+
+        update_clause = UpdateClause('update student')
+        set_clause = SetClause(s_str="set major = 'BIOL'")
+        where_clause = WhereClause(s_str='where id = 4')
+
+        expected_update_statement = UpdateStatement(
+            update_clause=update_clause, set_clause=set_clause,
+            where_clause=where_clause)
+
+        self.assertEqual(sql_str, str(expected_update_statement))
+
+    def test_update_statement_count(self):
+        sql_str = "update student set major = 'BIOL' where id = 4"
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        update_statement = UpdateStatement(s_str=sql_str, db_conn_str=db_conn_str)
+
+        actual_expected_row_count = update_statement.count()
+        expected_expected_row_count = 1
+
+        self.assertEqual(actual_expected_row_count,
+                         expected_expected_row_count)
+
+
+# TODO: Test DeleteClause
+
+
+class DeleteStatementTestCase(TestCase):
+    def test_delete_statement_basic(self):
+        sql_str = "delete from student where id = 4"
+
+        delete_clause = DeleteClause()
+        from_clause = FromClause('from student')
+        where_clause = WhereClause(s_str='where id = 4')
+
+        expected_delete_statement = DeleteStatement(
+            delete_clause=delete_clause, from_clause=from_clause,
+            where_clause=where_clause)
+
+        self.assertEqual(sql_str, str(expected_delete_statement))
+
+    def test_delete_statement_count(self):
+        sql_str = "delete from student where id = 4"
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        delete_statement = DeleteStatement(s_str=sql_str, db_conn_str=db_conn_str)
+
+        actual_expected_row_count = delete_statement.count()
+        expected_expected_row_count = 1
+
+        self.assertEqual(actual_expected_row_count,
+                         expected_expected_row_count)
+
+
+# TODO: Test get_dataset
+# TODO: Test parse_select_clause
+# TODO: Test parse_field
+# TODO: Test parse_fields
+# TODO: Test parse_fields_from_token_list
+
+# TODO: See if those last module-level functions could be static methods

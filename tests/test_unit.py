@@ -3,12 +3,11 @@
 from unittest import TestCase
 
 from sqlpt import service
-from sqlpt.sql import (
-    DeleteClause, DeleteStatement, Field, FromClause,
-    Join, OnClause, Query, SelectClause, SetClause, Table, UpdateClause,
-    UpdateStatement, WhereClause, parse_fields)
+from sqlpt.sql import (Field, FromClause, Join, OnClause, Query, SelectClause,
+                       Table, WhereClause, parse_fields)
 
 
+# TODO: Rename this file something other than test_unit
 class StringTestCase(TestCase):
     """ docstring tbd """
     def _test(self, sql_str, expected_select_clause, expected_from_clause,
@@ -543,66 +542,6 @@ class ConversionTestCase(TestCase):
 
 
 # TODO: Make a test case for each class in sql.py
-class UpdateStatementTestCase(TestCase):
-    """ docstring tbd """
-    def test_update_statement_basic(self):
-        """ docstring tbd """
-        sql_str = "update student set major = 'BIOL' where id = 4"
-
-        update_clause = UpdateClause('update student')
-        set_clause = SetClause(s_str="set major = 'BIOL'")
-        where_clause = WhereClause(s_str='where id = 4')
-
-        expected_update_statement = UpdateStatement(
-            update_clause=update_clause, set_clause=set_clause,
-            where_clause=where_clause)
-
-        self.assertEqual(sql_str, str(expected_update_statement))
-
-    def test_update_statement_count(self):
-        """ docstring tbd """
-        sql_str = "update student set major = 'BIOL' where id = 4"
-
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        update_statement = UpdateStatement(sql_str, db_conn_str)
-
-        actual_expected_row_count = update_statement.count()
-        expected_expected_row_count = 1
-
-        self.assertEqual(actual_expected_row_count,
-                         expected_expected_row_count)
-
-
-class DeleteStatementTestCase(TestCase):
-    """ docstring tbd """
-    def test_delete_statement_basic(self):
-        """ docstring tbd """
-        sql_str = "delete from student where id = 4"
-
-        delete_clause = DeleteClause()
-        from_clause = FromClause('from student')
-        where_clause = WhereClause(s_str='where id = 4')
-
-        expected_delete_statement = DeleteStatement(
-            delete_clause=delete_clause, from_clause=from_clause,
-            where_clause=where_clause)
-
-        self.assertEqual(sql_str, str(expected_delete_statement))
-
-    def test_delete_statement_count(self):
-        """ docstring tbd """
-        sql_str = "delete from student where id = 4"
-
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        delete_statement = DeleteStatement(sql_str, db_conn_str)
-
-        actual_expected_row_count = delete_statement.count()
-        expected_expected_row_count = 1
-
-        self.assertEqual(actual_expected_row_count,
-                         expected_expected_row_count)
-
-
 class ServiceTestCase(TestCase):
     """ docstring tbd """
     def test_remove_whitespace_from_strings(self):

@@ -1499,30 +1499,19 @@ class Field:
 
 @dataclass
 class UpdateClause:
-    """ docstring tbd """
+    """An update clause in an update statement"""
     dataset: DataSet
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, s_str=None):
         dataset = None
 
-        if len(args) == 1:
-            sql_str = args[0]
+        sql_parts = s_str.split()
 
-            if type(args[0]) == str:
-                sql_parts = sql_str.split()
-
-                leading_word = 'update'
-
-                if len(sql_parts) == 1:
-                    dataset = sql_parts[0]
-
-                else:
-                    dataset = sql_parts[1]
+        if len(sql_parts) == 1:
+            dataset = sql_parts[0]
 
         else:
-            leading_word = kwargs.get('leading_word')
-
-        self.leading_word = leading_word
+            dataset = sql_parts[1]
 
         self.dataset = dataset
 
@@ -1577,35 +1566,18 @@ class SetClause(ExpressionClause):
 
 @dataclass
 class UpdateStatement:
-    """ docstring tbd """
+    """An update sql statement"""
     sql_str: str = dataclass_field(repr=False)
     update_clause: UpdateClause
     set_clause: SetClause
     where_clause: WhereClause
     db_conn_str: str
 
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1:
-            if type(args[0]) == str:
-                s_str = args[0]
-                update_clause = UpdateClause(s_str) or None
-                set_clause = SetClause(s_str=s_str) or None
-                where_clause = WhereClause(s_str=s_str) or None
-
-        elif len(args) == 2:
-            if type(args[0]) == str:
-                s_str = args[0]
-                update_clause = UpdateClause(s_str) or None
-                set_clause = SetClause(s_str=s_str) or None
-                where_clause = WhereClause(s_str=s_str) or None
-                db_conn_str = args[1]
-
-        else:
-            s_str = ''
-            update_clause = kwargs.get('update_clause')
-            set_clause = kwargs.get('set_clause')
-            where_clause = kwargs.get('where_clause')
-            db_conn_str = kwargs.get('db_conn_str')
+    def __init__(self, s_str=None, update_clause=None, set_clause=None, where_clause=None, db_conn_str=None):
+        if s_str:
+            update_clause = UpdateClause(s_str) or None
+            set_clause = SetClause(s_str=s_str) or None
+            where_clause = WhereClause(s_str=s_str) or None
 
         self.sql_str = s_str
         self.update_clause = update_clause
@@ -1625,7 +1597,12 @@ class UpdateStatement:
         return string
 
     def count(self):
-        """ docstring tbd """
+        """Returns the count related to the update statement
+        
+        Returns:
+            ct (int): The count related to the update statement
+        """
+
         select_clause = SelectClause('select *')
         from_clause = FromClause(f'from {self.update_clause.dataset}')
         where_clause = self.where_clause
@@ -1636,19 +1613,16 @@ class UpdateStatement:
             where_clause=where_clause,
             db_conn_str=self.db_conn_str)
 
-        return query.count()
+        ct = query.count()
+
+        return ct
 
 
 @dataclass
 class DeleteClause:
-    """ docstring tbd """
-    leading_word: str
-
-    def __init__(self):
-        self.leading_word = 'delete'
-
+    """An update clause in an update statement"""
     def __str__(self):
-        return self.leading_word
+        return 'delete'
 
 
 @dataclass
@@ -1660,28 +1634,11 @@ class DeleteStatement:
     where_clause: WhereClause
     db_conn_str: str
 
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1:
-            if type(args[0]) == str:
-                s_str = args[0]
-                delete_clause = DeleteClause() or None
-                from_clause = FromClause(s_str) or None
-                where_clause = WhereClause(s_str=s_str) or None
-
-        elif len(args) == 2:
-            if type(args[0]) == str:
-                s_str = args[0]
-                delete_clause = DeleteClause() or None
-                from_clause = FromClause(s_str) or None
-                where_clause = WhereClause(s_str=s_str) or None
-                db_conn_str = args[1]
-
-        else:
-            s_str = ''
-            delete_clause = kwargs.get('delete_clause')
-            from_clause = kwargs.get('from_clause')
-            where_clause = kwargs.get('where_clause')
-            db_conn_str = kwargs.get('db_conn_str')
+    def __init__(self, s_str=None, delete_clause=None, from_clause=None, where_clause=None, db_conn_str=None):
+        if s_str:
+            delete_clause = DeleteClause() or None
+            from_clause = FromClause(s_str=s_str) or None
+            where_clause = WhereClause(s_str=s_str) or None
 
         self.sql_str = s_str
         self.delete_clause = delete_clause
@@ -1700,8 +1657,14 @@ class DeleteStatement:
 
         return string
 
+    # TODO: Consider a single count() method for Select, Update, Delete statements
     def count(self):
-        """ docstring tbd """
+        """Returns the count related to the delete statement
+        
+        Returns:
+            ct (int): The count related to the delete statement
+        """
+
         select_clause = SelectClause('select *')
         from_clause = self.from_clause
         where_clause = self.where_clause
