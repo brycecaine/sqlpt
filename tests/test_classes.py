@@ -7,6 +7,8 @@ from sqlpt.sql import (Comparison, DataSet, DeleteClause, DeleteStatement,
                        SelectClause, SetClause, Table, UpdateClause,
                        UpdateStatement, WhereClause)
 
+DB_CONN_STR = 'sqlite:///sqlpt/college.db'
+
 
 class QueryResultTestCase(TestCase):
     def test_query_result_create(self):
@@ -24,52 +26,47 @@ class DataSetTestCase(TestCase):
 
 
 class TableTestCase(TestCase):
-    def setUp(self):
-        super().setUp()
-
-        self.db_conn_str = 'sqlite:///sqlpt/college.db'
-
     def test_table_create(self):
-        table = Table(name='student_section', db_conn_str=self.db_conn_str)
+        table = Table(name='student_section', db_conn_str=DB_CONN_STR)
 
         self.assertEqual(table.name, 'student_section')
 
     def test_table_db_conn_exists(self):
-        table = Table(name='student_section', db_conn_str=self.db_conn_str)
+        table = Table(name='student_section', db_conn_str=DB_CONN_STR)
 
         self.assertEqual(type(table.db_conn), Engine)
 
     def test_table_rows_unique(self):
-        table = Table(name='student_section', db_conn_str=self.db_conn_str)
+        table = Table(name='student_section', db_conn_str=DB_CONN_STR)
         field_names = ['student_id', 'term_id', 'section_id']
         uniqueness = table.rows_unique(field_names)
 
         self.assertTrue(uniqueness)
 
     def test_table_rows_not_unique(self):
-        table = Table(name='student_section', db_conn_str=self.db_conn_str)
+        table = Table(name='student_section', db_conn_str=DB_CONN_STR)
         field_names = ['term_id']
         uniqueness = table.rows_unique(field_names)
 
         self.assertFalse(uniqueness)
 
     def test_table_count(self):
-        table = Table(name='student_section', db_conn_str=self.db_conn_str)
+        table = Table(name='student_section', db_conn_str=DB_CONN_STR)
         ct = table.count()
         expected_ct = 4
 
         self.assertEqual(ct, expected_ct)
 
     def test_table_get_column_names(self):
-        table = Table(name='student_section', db_conn_str=self.db_conn_str)
+        table = Table(name='student_section', db_conn_str=DB_CONN_STR)
         column_names = table.get_column_names()
         expected_column_names = ['id', 'student_id', 'term_id', 'section_id']
 
         self.assertEqual(column_names, expected_column_names)
 
     def test_table_equivalence(self):
-        table_1 = Table(name='student_section', db_conn_str=self.db_conn_str)
-        table_2 = Table(name='student_section', db_conn_str=self.db_conn_str)
+        table_1 = Table(name='student_section', db_conn_str=DB_CONN_STR)
+        table_2 = Table(name='student_section', db_conn_str=DB_CONN_STR)
 
         self.assertEqual(table_1, table_2)
 
@@ -315,10 +312,8 @@ class JoinTestCase(TestCase):
         self.assertEqual(str(join).split(' ')[0], 'right')
 
     def test_join_is_equivalent_to(self):
-        # TODO: Put this db defintion in a central place
-        db_conn_str = 'sqlite:///sqlpt/college.db'
         # TODO: Allow all classes to accept a single s_str argument or keyword args
-        dataset = Table(name='a', db_conn_str=db_conn_str)
+        dataset = Table(name='a', db_conn_str=DB_CONN_STR)
 
         on_clause_1 = OnClause('b = c')
         join_1 = Join(kind='left', dataset=dataset, on_clause=on_clause_1)
@@ -540,8 +535,7 @@ class QueryTestCase(TestCase):
     def test_query_create_with_db_conn_str(self):
         sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
                    'from c join d on e = f where g = h and i = j')
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=DB_CONN_STR)
 
         self.assertTrue(query)
 
@@ -564,16 +558,14 @@ class QueryTestCase(TestCase):
         self.assertEqual(query_1, query_2)
 
     def test_query_rows_unique(self):
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str='select * from student_section', db_conn_str=db_conn_str)
+        query = Query(sql_str='select * from student_section', db_conn_str=DB_CONN_STR)
         field_names = ['student_id', 'term_id', 'section_id']
         uniqueness = query.rows_unique(field_names)
 
         self.assertTrue(uniqueness)
 
     def test_query_rows_not_unique(self):
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str='select * from student_section', db_conn_str=db_conn_str)
+        query = Query(sql_str='select * from student_section', db_conn_str=DB_CONN_STR)
         field_names = ['term_id']
         uniqueness = query.rows_unique(field_names)
 
@@ -599,11 +591,10 @@ class QueryTestCase(TestCase):
               from section
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=DB_CONN_STR)
 
         subquery = query.select_clause.fields[2].query
-        subquery.db_conn_str = db_conn_str
+        subquery.db_conn_str = DB_CONN_STR
 
         actual_count = subquery.crop().count()
         expected_count = 2
@@ -620,10 +611,9 @@ class QueryTestCase(TestCase):
               from section
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=DB_CONN_STR)
 
-        query.select_clause.fields[2].query.db_conn_str = db_conn_str
+        query.select_clause.fields[2].query.db_conn_str = DB_CONN_STR
 
         actual_sql = str(query.select_clause.fields[2].query.parameterize())
         expected_sql = 'select name from term where term.id = :term_id'
@@ -641,10 +631,9 @@ class QueryTestCase(TestCase):
               from section
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=DB_CONN_STR)
 
-        query.select_clause.fields[2].query.db_conn_str = db_conn_str
+        query.select_clause.fields[2].query.db_conn_str = DB_CONN_STR
 
         actual_ct = (query.select_clause.fields[2].query
                      .parameterize().run(term_id=2).count())
@@ -658,8 +647,7 @@ class QueryTestCase(TestCase):
                    course_number
               from section
         '''
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=DB_CONN_STR)
 
         row_dicts = query.run()
         expected_row_dicts = [
@@ -677,8 +665,7 @@ class QueryTestCase(TestCase):
                    course_number
               from section
         '''
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=DB_CONN_STR)
 
         ct = query.count()
         expected_count = 4
@@ -692,8 +679,7 @@ class QueryTestCase(TestCase):
               from section
              where subject = 'LOGC'
         '''
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=DB_CONN_STR)
 
         cts = query.counts()
         expected_counts = {'query': 1, 'section': 4}
@@ -706,8 +692,7 @@ class QueryTestCase(TestCase):
               from student
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=DB_CONN_STR)
 
         actual_counts = query.counts()
 
@@ -725,8 +710,7 @@ class QueryTestCase(TestCase):
              where id <= 2
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=DB_CONN_STR)
 
         actual_counts = query.counts()
 
@@ -745,8 +729,7 @@ class QueryTestCase(TestCase):
                 on student.id = student_section.student_id
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=DB_CONN_STR)
 
         actual_counts = query.counts()
 
@@ -779,14 +762,13 @@ class QueryTestCase(TestCase):
               from section
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str_original, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str_original, db_conn_str=DB_CONN_STR)
 
         actual_scalarized_query = query.scalarize()
-        actual_scalarized_query.db_conn_str = db_conn_str
+        actual_scalarized_query.db_conn_str = DB_CONN_STR
 
         print('baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad')
-        expected_scalarized_query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+        expected_scalarized_query = Query(sql_str=sql_str_scalarized, db_conn_str=DB_CONN_STR)
         print('baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad')
 
         print(actual_scalarized_query.select_clause.fields[2].query.from_clause.__dict__)
@@ -803,8 +785,7 @@ class QueryTestCase(TestCase):
               from section
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=DB_CONN_STR)
 
         self.assertFalse(query.is_leaf())
         self.assertTrue(query.select_clause.fields[2].query.is_leaf())
@@ -820,8 +801,7 @@ class QueryTestCase(TestCase):
               from section
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=DB_CONN_STR)
         expected_sql = 'select subject, course_number, (select name from term where section.term_id = term.id) name from section'
 
         self.assertEqual(query.format_sql(), expected_sql)
@@ -834,8 +814,7 @@ class QueryTestCase(TestCase):
               from section
         '''
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        query = Query(sql_str=sql_str, db_conn_str=DB_CONN_STR)
         subquery_str = query.subquery_str()
         expected_subquery_str = '(select subject from section)'
 
@@ -939,8 +918,7 @@ class UpdateStatementTestCase(TestCase):
     def test_update_statement_count(self):
         sql_str = "update student set major = 'BIOL' where id = 4"
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        update_statement = UpdateStatement(s_str=sql_str, db_conn_str=db_conn_str)
+        update_statement = UpdateStatement(s_str=sql_str, db_conn_str=DB_CONN_STR)
 
         actual_expected_row_count = update_statement.count()
         expected_expected_row_count = 1
@@ -969,8 +947,7 @@ class DeleteStatementTestCase(TestCase):
     def test_delete_statement_count(self):
         sql_str = "delete from student where id = 4"
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-        delete_statement = DeleteStatement(s_str=sql_str, db_conn_str=db_conn_str)
+        delete_statement = DeleteStatement(s_str=sql_str, db_conn_str=DB_CONN_STR)
 
         actual_expected_row_count = delete_statement.count()
         expected_expected_row_count = 1

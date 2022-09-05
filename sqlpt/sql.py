@@ -10,9 +10,8 @@ from sqlalchemy import create_engine, exc, inspect
 from sqlparse.sql import Comparison as SqlParseComparison
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
-from sqlpt.service import (
-    get_join_kind, get_truth_table_result, is_equivalent, is_join,
-    remove_whitespace)
+from sqlpt.service import (get_join_kind, get_truth_table_result, is_join,
+                           remove_whitespace)
 
 
 class QueryResult(list):
@@ -1627,7 +1626,7 @@ class DeleteClause:
 
 @dataclass
 class DeleteStatement:
-    """ docstring tbd """
+    """A delete sql statement"""
     sql_str: str = dataclass_field(repr=False)
     delete_clause: DeleteClause
     from_clause: FromClause
