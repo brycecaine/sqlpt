@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from sqlalchemy.engine import Engine
 from sqlpt.sql import (Comparison, DataSet, Expression, ExpressionClause,
-                       FromClause, HavingClause, Join, OnClause, Query,
+                       Field, FromClause, HavingClause, Join, OnClause, Query,
                        QueryResult, SelectClause, SetClause, Table,
                        WhereClause)
 
@@ -586,12 +586,309 @@ class QueryTestCase(TestCase):
 
         self.assertEqual(location, expected_locations)
 
-    # TODO: 2022-09-04 Continue testing and docstring'ing the rest of the FromClause methods
-    #     start with delete_node here
+    # FUTURE: Test delete_node
+    # FUTURE: Test locate_invalid_columns
+
+    def test_query_crop(self):
+        """Test ignore dangling parameters"""
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+
+        subquery = query.select_clause.fields[2].query
+        subquery.db_conn_str = db_conn_str
+
+        actual_count = subquery.crop().count()
+        expected_count = 2
+
+        self.assertEqual(actual_count, expected_count)
+
+    # FUTURE: Test parameterize_node
+
+    def test_query_parameterize(self):
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+
+        query.select_clause.fields[2].query.db_conn_str = db_conn_str
+
+        actual_sql = str(query.select_clause.fields[2].query.parameterize())
+        expected_sql = 'select name from term where term.id = :term_id'
+
+        self.assertEqual(actual_sql, expected_sql)
+
     # TODO: Move QueryTestCase methods from test_unit.py to here
 
+    def test_run_parameterized_query(self):
+        """ docstring tbd """
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
 
-# Field
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+
+        query.select_clause.fields[2].query.db_conn_str = db_conn_str
+
+        actual_ct = (query.select_clause.fields[2].query
+                     .parameterize().run(term_id=2).count())
+        expected_ct = 1
+
+        self.assertEqual(actual_ct, expected_ct)
+
+    def test_query_run(self):
+        sql_str = '''
+            select subject,
+                   course_number
+              from section
+        '''
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+
+        row_dicts = query.run()
+        expected_row_dicts = [
+            {'subject': 'LOGC', 'course_number': '101'},
+            {'subject': 'LING', 'course_number': '101'},
+            {'subject': 'COMP', 'course_number': '101'},
+            {'subject': 'LITR', 'course_number': '101'},
+        ]
+
+        self.assertEqual(row_dicts, expected_row_dicts)
+
+    def test_query_count(self):
+        sql_str = '''
+            select subject,
+                   course_number
+              from section
+        '''
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+
+        ct = query.count()
+        expected_count = 4
+
+        self.assertEqual(ct, expected_count)
+
+    def test_query_counts(self):
+        sql_str = '''
+            select subject,
+                   course_number
+              from section
+             where subject = 'LOGC'
+        '''
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+
+        cts = query.counts()
+        expected_counts = {'query': 1, 'section': 4}
+
+        self.assertEqual(cts, expected_counts)
+    
+    def test_query_counts_basic(self):
+        sql_str = '''
+            select *
+              from student
+        '''
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+
+        actual_counts = query.counts()
+
+        expected_counts = {
+            'query': 4,
+            'student': 4
+        }
+
+        self.assertEqual(actual_counts, expected_counts)
+
+    def test_query_counts_where(self):
+        sql_str = '''
+            select *
+              from student
+             where id <= 2
+        '''
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+
+        actual_counts = query.counts()
+
+        expected_counts = {
+            'query': 2,
+            'student': 4
+        }
+
+        self.assertEqual(actual_counts, expected_counts)
+
+    def test_query_counts_joins(self):
+        sql_str = '''
+            select *
+              from student
+              join student_section
+                on student.id = student_section.student_id
+        '''
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+
+        actual_counts = query.counts()
+
+        expected_counts = {
+            'query': 4,
+            'student': 4,
+            'student_section': 4
+        }
+
+        self.assertEqual(actual_counts, expected_counts)
+
+    # FUTURE: Test rows_exist
+
+    # TODO: Unskip this when fixed (the term Table wasn't getting the db_conn_str)
+    def skip_test_query_scalarize(self):
+        sql_str_original = '''
+            select subject,
+                   course_number,
+                   name
+              from section
+              left
+              join term
+                on section.term_id = term.id
+        '''
+
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str_original, db_conn_str=db_conn_str)
+
+        actual_scalarized_query = query.scalarize()
+        actual_scalarized_query.db_conn_str = db_conn_str
+
+        print('baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad')
+        expected_scalarized_query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+        print('baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad')
+
+        print(actual_scalarized_query.select_clause.fields[2].query.from_clause.__dict__)
+        print('ddddddddddddddddd')
+        print(expected_scalarized_query.select_clause.fields[2].query.from_clause.__dict__)
+
+        self.assertEqual(actual_scalarized_query, expected_scalarized_query)
+
+    def test_query_is_leaf(self):
+        sql_str_scalarized = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str_scalarized, db_conn_str=db_conn_str)
+
+        self.assertFalse(query.is_leaf())
+        self.assertTrue(query.select_clause.fields[2].query.is_leaf())
+
+    # FUTURE: Test fuse
+    # FUTURE: Test bind_params
+
+    def test_query_format_sql(self):
+        sql_str = '''
+            select subject,
+                   course_number,
+                   (select name from term where section.term_id = term.id) name
+              from section
+        '''
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        expected_sql = 'select subject, course_number, (select name from term where section.term_id = term.id) name from section'
+
+        self.assertEqual(query.format_sql(), expected_sql)
+
+    # FUTURE: Test output_sql_file
+
+    def test_query_subquery_str(self):
+        sql_str = '''
+            select subject
+              from section
+        '''
+
+        db_conn_str = 'sqlite:///sqlpt/college.db'
+        query = Query(sql_str=sql_str, db_conn_str=db_conn_str)
+        subquery_str = query.subquery_str()
+        expected_subquery_str = '(select subject from section)'
+
+        self.assertEqual(subquery_str, expected_subquery_str)
+
+    # FUTURE: Test filter_by_subquery
+
+
+class FieldTestCase(TestCase):
+    """ docstring tbd """
+    def test_field_str_normal(self):
+        """ docstring tbd """
+        field = Field('exp a')
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, 'exp')
+        self.assertEqual(field.alias, 'a')
+
+    def test_field_list_normal(self):
+        """ docstring tbd """
+        field = Field('exp a')
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, 'exp')
+        self.assertEqual(field.alias, 'a')
+
+    def test_field_str_subquery(self):
+        """ docstring tbd """
+        field = Field('(select fld from tbl) a')
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, '(select fld from tbl)')
+        self.assertEqual(field.alias, 'a')
+        self.assertEqual(type(field.query), Query)
+
+    def test_field_list_subquery(self):
+        """ docstring tbd """
+        field = Field('(select fld from tbl) a')
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, '(select fld from tbl)')
+        self.assertEqual(field.alias, 'a')
+        self.assertEqual(type(field.query), Query)
+
+    def test_field_no_subquery(self):
+        """ docstring tbd """
+        field = Field('column_name a')
+
+        self.assertTrue(field)
+        self.assertEqual(field.expression, 'column_name')
+        self.assertEqual(field.alias, 'a')
+        self.assertEqual(field.query, Query())
+
+
 # UpdateClause
 # UpdateStatement
 # DeleteClause

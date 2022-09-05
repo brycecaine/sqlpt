@@ -1005,7 +1005,7 @@ class HavingClause(ExpressionClause):
 # TODO: Add suport for OrderByClause
 @dataclass
 class Query(DataSet):
-    """ docstring tbd """
+    """A sql query"""
     sql_str: str = dataclass_field(repr=False)
     select_clause: SelectClause
     from_clause: FromClause
@@ -1133,9 +1133,16 @@ class Query(DataSet):
 
         return locations
 
-    # TODO: 2022-09-04 Continue testing and docstring'ing the rest of the FromClause methods
     def delete_node(self, coordinates):
-        """ docstring tbd """
+        """Deletes a node from the sql query
+        
+        Args:
+            coordinates (list): A list of coordinate tuples
+        
+        Returns:
+            self (Query): The resulting query
+        """
+
         node = self
 
         for coordinate in coordinates:
@@ -1152,7 +1159,12 @@ class Query(DataSet):
         return self
 
     def locate_invalid_columns(self):
-        """ docstring tbd """
+        """Locates and returns coordinates of invalid columns
+        
+        Returns:
+            invalid_column_coordinates (list): A list of invalid coordinate tuples
+        """
+
         invalid_column_coordinates = []
 
         try:
@@ -1168,14 +1180,27 @@ class Query(DataSet):
         return invalid_column_coordinates
 
     def crop(self):
-        """ docstring tbd """
+        """Removes a node from the query
+        
+        Returns:
+            cropped_query (Query): The resulting query
+        """
+
         invalid_column_coordinates = self.locate_invalid_columns()
         cropped_query = self.delete_node(invalid_column_coordinates)
 
         return cropped_query
 
     def parameterize_node(self, coordinates):
-        """ docstring tbd """
+        """Parameterizes a node in the query
+        
+        Args:
+            coordinates (list): A list of coordinate tuples
+
+        Returns:
+            self (Query): The resulting query
+        """
+
         node = self
         leaf_node = None
 
@@ -1202,7 +1227,12 @@ class Query(DataSet):
         return self
 
     def parameterize(self):
-        """ docstring tbd """
+        """Parameterizes a the query
+        
+        Returns:
+            parameterized_query (Query): The resulting query
+        """
+
         # self.where_clause.parameterize(parameter_fields)
         invalid_column_coordinates = self.locate_invalid_columns()
         parameterized_query = self.parameterize_node(
@@ -1211,7 +1241,15 @@ class Query(DataSet):
         return parameterized_query
 
     def run(self, **kwargs):
-        """ docstring tbd """
+        """Runs (executes) the query
+
+        Args:
+            kwargs (kwargs): Keyword arguments to pass as parameters when executing
+
+        Returns:
+            row_dicts (list): The resulting list of dictionaries from running the query
+        """
+
         rows = []
 
         with self.db_conn.connect() as db_conn:
@@ -1225,11 +1263,26 @@ class Query(DataSet):
         return row_dicts
 
     def count(self, **kwargs):
-        """ docstring tbd """
-        return len(self.run(**kwargs))
+        """Counts the rows from running the query
+
+        Args:
+            kwargs (kwargs): Keyword arguments to pass as parameters when executing
+
+        Returns:
+            ct (int): The count of resulting rows from running the query
+        """
+
+        ct = len(self.run(**kwargs))
+
+        return ct
 
     def counts(self):
-        """ docstring tbd """
+        """Counts the rows from running the query and tables within the query
+
+        Returns:
+            counts_dict (dict): The count of rows from running the query and its tables
+        """
+
         counts_dict = {}
         query_count = self.count()
         counts_dict['query'] = query_count
@@ -1243,7 +1296,15 @@ class Query(DataSet):
         return counts_dict
 
     def rows_exist(self, **kwargs):
-        """ docstring tbd """
+        """Checks if rows exist in the query
+        
+        Args:
+            kwargs (kwargs): Keyword arguments to pass as parameters when executing
+
+        Returns:
+            rows_exist_bool (bool): Whether rows exist in the query results or not
+        """
+
         row_count = self.count(**kwargs)
 
         rows_exist_bool = True if row_count != 0 else False
@@ -1251,7 +1312,12 @@ class Query(DataSet):
         return rows_exist_bool
 
     def scalarize(self):
-        """ docstring tbd """
+        """Converts a query's left-join-statement fields to scalar subqueries
+        
+        Returns:
+            scalarized_query (Query): The resulting query
+        """
+
         joins_to_remove = []
 
         for join in self.from_clause.joins:
@@ -1292,7 +1358,12 @@ class Query(DataSet):
         return scalarized_query
 
     def is_leaf(self):
-        """ docstring tbd """
+        """Checks if a query is a leaf node, meaning it doesn't contain any subqueries
+
+        Returns:
+            not contains_subqueries (bool): Whether the query doesn't contain subqueries
+        """
+
         contains_subqueries = False
 
         for field in self.select_clause.fields:
@@ -1334,18 +1405,36 @@ class Query(DataSet):
         return self
 
     def format_sql(self):
-        """ docstring tbd """
+        """Formats and returns sql in a human-readable format
+        
+        Returns:
+            formatted_sql (str): The formatted sql
+        """
+
         formatted_sql = sqlparse.format(self.__str__())
 
         return formatted_sql
 
     def output_sql_file(self, path):
-        """ docstring tbd """
+        """Outputs the query to a sql file
+        
+        Args:
+            path (str): The path of the destination sql file
+
+        Returns:
+            None
+        """
+
         with open(path, 'wt') as sql_file:
             sql_file.write(self.format_sql())
 
     def subquery_str(self):
-        """ docstring tbd """
+        """Get the subquery version of the query
+        
+        Returns:
+            string (str): the subquery version of the query (wrapped with parens)
+        """
+
         string = f'({self.__str__()})'
 
         return string
@@ -1364,40 +1453,34 @@ class Query(DataSet):
 
         self.where_clause.add_comparison(comparison)
 
-    # TODO: Make a query.is_equivalent_to instance method
+    # FUTURE: Make a query.is_equivalent_to instance method
 
 
 @dataclass
 class Field:
-    """ docstring tbd """
+    """A field in a query"""
     expression: str
     alias: str
     query: Query = dataclass_field(repr=False)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, s_str=None, expression=None, alias=None, query=None, db_conn_str=None):
         db_conn_str = None
 
-        if len(args) == 1:
-            if type(args[0]) == str:
-                field_str = args[0]
-                expression, alias, query = parse_field(field_str, 'tuple', db_conn_str)
+        if s_str:
+            expression, alias, query = parse_field(s_str, 'tuple', db_conn_str)
 
         else:
-            expression = kwargs.get('expression')
-            alias = kwargs.get('alias')
-
             if expression:
-                db_conn_str = kwargs.get('db_conn_str')
-
                 # TODO: Unhardcode this
-                if 'query' in kwargs:
-                    if kwargs['query'].from_clause:
-                        kwargs['query'].from_clause.from_dataset.db_conn_str = db_conn_str
+                if query:
+                    if query.from_clause:
+                        query.from_clause.from_dataset.db_conn_str = db_conn_str
 
-                query = kwargs.get('query', Query(sql_str=expression, db_conn_str=db_conn_str))
+                else:
+                    query = Query(sql_str=expression, db_conn_str=db_conn_str)
+
             else:
                 query = None
-            db_conn_str = kwargs.get('db_conn_str')
 
         self.expression = expression
         self.alias = alias
@@ -1492,7 +1575,6 @@ class SetClause(ExpressionClause):
         return token_list
 
 
-# TODO: 2022-09-03 Left off here...
 @dataclass
 class UpdateStatement:
     """ docstring tbd """

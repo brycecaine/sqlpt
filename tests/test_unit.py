@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from sqlpt import service
 from sqlpt.sql import (
-    Comparison, DeleteClause, DeleteStatement, Field, FromClause,
+    DeleteClause, DeleteStatement, Field, FromClause,
     Join, OnClause, Query, SelectClause, SetClause, Table, UpdateClause,
     UpdateStatement, WhereClause, parse_fields)
 
@@ -542,53 +542,7 @@ class ConversionTestCase(TestCase):
         self.assertTrue(output_query)
 
 
-# FUTURE: Make a test case for each class in sql.py
-class FieldTestCase(TestCase):
-    """ docstring tbd """
-    def test_field_str_normal(self):
-        """ docstring tbd """
-        field = Field('exp a')
-
-        self.assertTrue(field)
-        self.assertEqual(field.expression, 'exp')
-        self.assertEqual(field.alias, 'a')
-
-    def test_field_list_normal(self):
-        """ docstring tbd """
-        field = Field('exp a')
-
-        self.assertTrue(field)
-        self.assertEqual(field.expression, 'exp')
-        self.assertEqual(field.alias, 'a')
-
-    def test_field_str_subquery(self):
-        """ docstring tbd """
-        field = Field('(select fld from tbl) a')
-
-        self.assertTrue(field)
-        self.assertEqual(field.expression, '(select fld from tbl)')
-        self.assertEqual(field.alias, 'a')
-        self.assertEqual(type(field.query), Query)
-
-    def test_field_list_subquery(self):
-        """ docstring tbd """
-        field = Field('(select fld from tbl) a')
-
-        self.assertTrue(field)
-        self.assertEqual(field.expression, '(select fld from tbl)')
-        self.assertEqual(field.alias, 'a')
-        self.assertEqual(type(field.query), Query)
-
-    def test_field_no_subquery(self):
-        """ docstring tbd """
-        field = Field('column_name a')
-
-        self.assertTrue(field)
-        self.assertEqual(field.expression, 'column_name')
-        self.assertEqual(field.alias, 'a')
-        self.assertEqual(field.query, Query())
-
-
+# TODO: Make a test case for each class in sql.py
 class UpdateStatementTestCase(TestCase):
     """ docstring tbd """
     def test_update_statement_basic(self):
