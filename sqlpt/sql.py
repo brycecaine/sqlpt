@@ -1200,7 +1200,7 @@ class Query(DataSet):
                     node = node[component]
                     leaf_node = node
 
-        # Assuming (I know...) that leaf_node is an instance of Comparison
+        # Assuming that leaf_node is an instance of Comparison
         # To parameterize a comparison, use a standard approach where the bind
         # parameter is the right_term, so if the invalid column is the
         # left_term, swap them first and then give the right_term a standard

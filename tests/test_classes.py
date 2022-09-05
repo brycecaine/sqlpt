@@ -7,7 +7,7 @@ from sqlpt.sql import (Comparison, DataSet, DeleteClause, DeleteStatement,
                        QueryResult, SelectClause, SetClause, Table,
                        UpdateClause, UpdateStatement, WhereClause)
 
-DB_CONN_STR = 'sqlite:///sqlpt/college.db'
+DB_CONN_STR = 'sqlite:///tests/college.db'
 
 
 class QueryResultTestCase(TestCase):
