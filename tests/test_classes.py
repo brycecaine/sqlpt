@@ -312,7 +312,6 @@ class JoinClauseTestCase(TestCase):
         self.assertEqual(str(join_clause).split(' ')[0], 'right')
 
     def test_join_clause_is_equivalent_to(self):
-        # TODO: Allow all classes to accept a single s_str argument or keyword args
         dataset = Table(name='a', db_conn_str=DB_CONN_STR)
 
         on_clause_1 = OnClause('b = c')
@@ -1072,10 +1071,10 @@ class DeleteStatementTestCase(TestCase):
                          expected_expected_row_count)
 
 
-# TODO: Test get_dataset
-# TODO: Test parse_select_clause
-# TODO: Test parse_field
-# TODO: Test parse_fields
-# TODO: Test parse_fields_from_token_list
+# FUTURE: Test get_dataset
+# FUTURE: Test parse_select_clause
+# FUTURE: Test parse_field
+# FUTURE: Test parse_fields
+# FUTURE: Test parse_fields_from_token_list
 
 # FUTURE: See if those last module-level functions could be static methods

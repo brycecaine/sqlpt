@@ -405,7 +405,6 @@ class ConversionTestCase(TestCase):
         self.assertTrue(output_query)
 
 
-# TODO: Make a test case for each class in sql.py
 class ServiceTestCase(TestCase):
     """ docstring tbd """
     def test_remove_whitespace_from_strings(self):

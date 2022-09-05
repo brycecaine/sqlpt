@@ -13,6 +13,8 @@ from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 from sqlpt.service import (get_join_clause_kind, get_truth_table_result, is_join_clause,
                            remove_whitespace)
 
+# FUTURE: Allow all classes to accept a single s_str argument or keyword args
+
 
 class QueryResult(list):
     """ docstring tbd """
@@ -491,7 +493,7 @@ class JoinClause:
         return equivalent
 
 
-# TODO: Align the dataclass attributes with what's in __init__ in all methods
+# FUTURE: Align the dataclass attributes with what's in __init__ in all methods
 @dataclass
 class FromClause:
     """ docstring tbd """
@@ -499,7 +501,7 @@ class FromClause:
     join_clauses: list
 
     # Can either have s_str and optional db_conn_str, or from_dataset and join clauses
-    # TODO: Raise exception if args aren't passed in properly (do this for other methods too)
+    # FUTURE: Raise exception if args aren't passed in properly (do this for other methods too)
     def __init__(self, s_str=None, from_dataset=None, join_clauses=None, db_conn_str=None):
         if s_str:
             token_list = self._parse_from_clause_from_str(s_str)
@@ -1008,7 +1010,7 @@ class Query(DataSet):
             # Accommodate subqueries surrounded by parens
             sql_str = sql_str[1:-1] if sql_str[:7] == '(select' else sql_str
 
-            # TODO: Do away with these "or None"s?
+            # FUTURE: Do away with these "or None"s?
             select_clause = SelectClause(sql_str) or None
             from_clause = FromClause(s_str=sql_str, db_conn_str=db_conn_str) or None
             where_clause = WhereClause(s_str=sql_str) or None
@@ -1642,7 +1644,7 @@ class DeleteStatement:
 
         return string
 
-    # TODO: Consider a single count() method for Select, Update, Delete statements
+    # FUTURE: Consider a single count() method for Select, Update, Delete statements
     def count(self):
         """Returns the count related to the delete statement
         
