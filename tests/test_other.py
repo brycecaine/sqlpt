@@ -30,8 +30,6 @@ class StringTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select * from dual where dummy = 'X'"
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-
         expected_select_clause = SelectClause('select *')
         expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(s_str="where dummy = 'X'")
@@ -43,8 +41,6 @@ class StringTestCase(TestCase):
         """ docstring tbd """
         sql_str = "select fld_1 from dual where dummy = 'X'"
 
-        db_conn_str = 'sqlite:///sqlpt/college.db'
-
         expected_select_clause = SelectClause('select fld_1')
         expected_from_clause = FromClause('from dual')
         expected_where_clause = WhereClause(s_str="where dummy = 'X'")
@@ -55,8 +51,6 @@ class StringTestCase(TestCase):
     def test_query_multiple_fields(self):
         """ docstring tbd """
         sql_str = "select fld_1, fld_2 from dual where dummy = 'X'"
-
-        db_conn_str = 'sqlite:///sqlpt/college.db'
 
         expected_select_clause = SelectClause('select fld_1, fld_2')
         expected_from_clause = FromClause('from dual')
