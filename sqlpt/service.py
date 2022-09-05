@@ -8,6 +8,7 @@ from sqlparse.sql import Comparison as SQLParseComparison
 from sqlparse.sql import Function, Identifier, IdentifierList, Token
 
 
+# FUTURE: See if these are needed and move them to class or static methods
 def remove_whitespace(item_list, addl_chars=()):
     """ docstring tbd """
     tokens = []
