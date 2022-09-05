@@ -534,6 +534,13 @@ class HavingClauseTestCase(TestCase):
 
 
 class QueryTestCase(TestCase):
+    maxDiff = None
+
+    def setUp(self):
+        self.sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
+                        'from c join d on e = f where g = h and i = j')
+        self.query = Query(sql_str=self.sql_str, db_conn_str=DB_CONN_STR)
+
     def test_query_create_with_db_conn_str(self):
         sql_str = ('select a name, b, fn(id, dob) age, fn(id, height) '
                    'from c join d on e = f where g = h and i = j')
@@ -823,6 +830,115 @@ class QueryTestCase(TestCase):
         self.assertEqual(subquery_str, expected_subquery_str)
 
     # FUTURE: Test filter_by_subquery
+
+    def test_fields(self):
+        expected_fields = [
+            Field('a name'),
+            Field('b'),
+            Field('fn(id, dob) age'),
+            Field('fn(id, height)'),
+        ]
+        actual_fields = self.query.select_clause.fields
+
+        self.assertEqual(actual_fields, expected_fields)
+
+        self.assertEqual(str(actual_fields[0]), 'a name')
+        self.assertEqual(str(actual_fields[1]), 'b')
+        self.assertEqual(str(actual_fields[2]), 'fn(id, dob) age')
+        self.assertEqual(str(actual_fields[3]), 'fn(id, height)')
+
+    def test_select_clause(self):
+        expected_select_clause_str = (
+            'select a name, b, fn(id, dob) age, fn(id, height)')
+        expected_select_clause = SelectClause(expected_select_clause_str)
+        actual_select_clause = self.query.select_clause
+
+        self.assertEqual(actual_select_clause, expected_select_clause)
+        self.assertEqual(str(actual_select_clause), expected_select_clause_str)
+
+    def test_joins(self):
+        join_dict = {
+            'kind': 'inner',
+            'dataset': Table(name='d', db_conn_str=DB_CONN_STR),
+            'on_clause': OnClause(s_str='on e = f')}
+        expected_joins = [Join(**join_dict)]
+
+        actual_joins = self.query.from_clause.joins
+
+        self.assertEqual(actual_joins, expected_joins)
+
+        self.assertEqual(str(actual_joins[0]), 'join d on e = f')
+
+    def test_from_clause(self):
+        join_dict = {
+            'kind': 'inner',
+            'dataset': Table(name='d', db_conn_str=DB_CONN_STR),
+            'on_clause': OnClause(s_str='on e = f')}
+        expected_joins = [Join(**join_dict)]
+
+        expected_table = Table(name='c', db_conn_str=DB_CONN_STR)
+        expected_from_clause = FromClause(
+            from_dataset=expected_table, joins=expected_joins)
+        actual_from_clause = self.query.from_clause
+
+        self.assertEqual(actual_from_clause, expected_from_clause)
+
+        self.assertEqual(str(actual_from_clause), 'from c join d on e = f')
+
+    def test_where_clause(self):
+        expected_where_clause = WhereClause(s_str='where g = h and i = j')
+        actual_where_clause = self.query.where_clause
+
+        self.assertEqual(actual_where_clause, expected_where_clause)
+
+        self.assertEqual(str(actual_where_clause), 'where g = h and i = j')
+
+    def test_query(self):
+        expected_query = Query(sql_str=self.sql_str, db_conn_str=DB_CONN_STR)
+        actual_query = self.query
+
+        self.assertEqual(actual_query, expected_query)
+
+        self.assertEqual(str(actual_query), self.sql_str)
+
+    def test_query_without_from_clause(self):
+        sql_str = 'select 1'
+        actual_query = Query(sql_str=sql_str)
+
+        self.assertEqual(str(actual_query), sql_str)
+
+    def test_complex_query(self):
+        """ docstring tbd """
+        sql_str = '''
+            select a name,
+                   b,
+                   fn(id, dob) age,
+                   fn(id, height),
+                   (select c1 from a1 where a1.b1 = b) c1
+              from c
+              join d
+                on e = f
+              left
+              join (select shape from k where kind = 'quadrilateral')
+                on l = m
+               and n = o
+             where g = h
+               and i = j
+        '''
+
+        query = Query(sql_str=sql_str)
+        expected_query = Query(sql_str=sql_str)
+        actual_query = query
+
+        self.assertEqual(actual_query, expected_query)
+
+        expected_query_str = (
+            "select a name, b, fn(id, dob) age, fn(id, height), (select c1 "
+            "from a1 where a1.b1 = b) c1 from c join d on e = f left join "
+            "(select shape from k where kind = 'quadrilateral') on l = m and "
+            "n = o where g = h and i = j")
+
+        self.assertEqual(actual_query.__str__(), expected_query_str)
 
 
 class FieldTestCase(TestCase):
