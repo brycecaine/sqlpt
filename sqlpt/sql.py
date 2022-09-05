@@ -265,6 +265,7 @@ class SelectClause:
 
         return equivalent
 
+    # FUTURE: fuse()
 
 @dataclass
 class Expression:
@@ -491,6 +492,8 @@ class JoinClause:
                       self.on_clause.is_equivalent_to(other.on_clause))
 
         return equivalent
+
+    # FUTURE: drives_population()
 
 
 # FUTURE: Align the dataclass attributes with what's in __init__ in all methods
@@ -743,6 +746,8 @@ class FromClause:
 
         self.join_clauses.remove(join_clause)
 
+    # FUTURE: fuse()
+
 
 @dataclass
 class Comparison:
@@ -924,6 +929,9 @@ class WhereClause(ExpressionClause):
                 locations.append(location_tuple)
 
         return locations
+
+    # FUTURE: fuse()
+    # FUTURE: parameterize()
 
 
 class GroupByClause:
@@ -1441,6 +1449,7 @@ class Query(DataSet):
         self.where_clause.add_comparison(comparison)
 
     # FUTURE: Make a query.is_equivalent_to instance method
+    # FUTURE: fuse()
 
 
 @dataclass
@@ -1482,6 +1491,9 @@ class Field:
         description = f'{self.expression}{alias}'
 
         return description
+
+    # FUTURE: can_be_functionalized(self, select_clause)
+    # FUTURE: functionalize()
 
 
 @dataclass
