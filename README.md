@@ -85,7 +85,7 @@ https://sqlpt.readthedocs.io
 - [x] Count rows in a query
 - [x] Count rows in underlying datasets
 - [x] Count expected rows in an update statement
-- [ ] Count expected rows in a delete statement
+- [x] Count expected rows in a delete statement
 - [x] Identify filters in join and where clauses
 - [x] Check table granularity
 - [x] Check if query is leaf query
@@ -107,5 +107,6 @@ https://sqlpt.readthedocs.io
 
 ## Code
 - [ ] Underscore methods and where to locate methods (move some to service)
-- [ ] Distinguish between s_str and sql_str everywhere (s_str being a snippet? and sql_str a full query sql)
+- [ ] Distinguish between s_str and sql_str everywhere (s_str being a snippet and sql_str a full query sql)
 - [ ] Document all different ways to construct each clause
+- [ ] Address FUTURE notes in code
