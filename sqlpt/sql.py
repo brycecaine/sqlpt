@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, exc, inspect
 from sqlparse.sql import Comparison as SqlParseComparison
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
-from sqlpt.service import (get_join_kind, get_truth_table_result, is_join,
+from sqlpt.service import (get_join_clause_kind, get_truth_table_result, is_join_clause,
                            remove_whitespace)
 
 
@@ -389,7 +389,7 @@ class ExpressionClause:
 
 
 class OnClause(ExpressionClause):
-    """A sql join's on clause"""
+    """A sql join clause's on clause"""
 
     def __init__(self, s_str=None, expression=None, token_list=None):
         super().__init__(s_str=s_str, leading_word='on', expression=expression, token_list=token_list)
@@ -430,9 +430,8 @@ class OnClause(ExpressionClause):
         return token_list
 
 
-# TODO: Change to JoinClause for consistency
 @dataclass
-class Join:
+class JoinClause:
     """ docstring tbd """
     kind: str
     dataset: DataSet
@@ -456,9 +455,9 @@ class Join:
         else:
             dataset_str = self.dataset
 
-        join_str = f'{self.simple_kind} {dataset_str} {self.on_clause}'
+        join_clause_str = f'{self.simple_kind} {dataset_str} {self.on_clause}'
 
-        return join_str
+        return join_clause_str
 
     @property
     def simple_kind(self):
@@ -473,14 +472,14 @@ class Join:
         return kind
 
     def is_equivalent_to(self, other):
-        """Returns equivalence of the join logic; this is different than checking
+        """Returns equivalence of the join-clause logic; this is different than checking
             for equality (__eq__)
 
         Args:
-            other (Join): Another join to compare to
+            other (JoinClause): Another join clause to compare to
             
         Returns:
-            equivalent (bool): Whether the joins are logically equivalent
+            equivalent (bool): Whether the join clauses are logically equivalent
         """
 
         equivalent = (self.kind == other.kind
@@ -497,19 +496,19 @@ class Join:
 class FromClause:
     """ docstring tbd """
     from_dataset: DataSet
-    joins: list
+    join_clauses: list
 
-    # Can either have s_str and optional db_conn_str, or from_dataset and joins
+    # Can either have s_str and optional db_conn_str, or from_dataset and join clauses
     # TODO: Raise exception if args aren't passed in properly (do this for other methods too)
-    def __init__(self, s_str=None, from_dataset=None, joins=None, db_conn_str=None):
+    def __init__(self, s_str=None, from_dataset=None, join_clauses=None, db_conn_str=None):
         if s_str:
             token_list = self._parse_from_clause_from_str(s_str)
 
-            from_dataset, joins = self._parse_from_clause_from_tokens(
+            from_dataset, join_clauses = self._parse_from_clause_from_tokens(
                 token_list, db_conn_str)
 
         self.from_dataset = from_dataset
-        self.joins = joins or []
+        self.join_clauses = join_clauses or []
 
     def __hash__(self):
         return hash(str(self))
@@ -532,8 +531,8 @@ class FromClause:
 
             from_clause_str = f'from {dataset_str}'
 
-            for join in self.joins:
-                from_clause_str += f' {join}'
+            for join_clause in self.join_clauses:
+                from_clause_str += f' {join_clause}'
 
         return from_clause_str
 
@@ -569,7 +568,7 @@ class FromClause:
 
     @staticmethod
     def _parse_from_clause_from_tokens(token_list, db_conn_str=None):
-        """Parses and returns a from-dataset and joins based on the given token_list
+        """Parses and returns a from-dataset and join clauses based on the given token_list
         
         Args:
             s_str (str): A short sql string representing a from clause
@@ -579,7 +578,7 @@ class FromClause:
         """
 
         from_dataset = None
-        joins = []
+        join_clauses = []
 
         if token_list:
             # Remove 'from' keyword for now
@@ -589,32 +588,32 @@ class FromClause:
             token = token_list.pop(0)
             from_dataset = get_dataset(token, db_conn_str)
 
-            # Construct joins
+            # Construct join_clauses
             kind = None
             dataset = None
             on_tokens = []
 
             for token in token_list:
-                # Parse join token
-                if is_join(token):
-                    # Create join object with previously populated values
+                # Parse join_clause token
+                if is_join_clause(token):
+                    # Create join_clause object with previously populated values
                     # if applicable, and clear out values for a next one
                     if kind and dataset and on_tokens:
-                        join_kind = deepcopy(str(kind))
-                        join_dataset = deepcopy(str(dataset))
-                        join_on_clause = OnClause(token_list=on_tokens)
+                        join_clause_kind = deepcopy(str(kind))
+                        join_clause_dataset = deepcopy(str(dataset))
+                        join_clause_on_clause = OnClause(token_list=on_tokens)
 
-                        join = Join(kind=join_kind,
-                                    dataset=join_dataset,
-                                    on_clause=join_on_clause)
+                        join_clause = JoinClause(kind=join_clause_kind,
+                                                 dataset=join_clause_dataset,
+                                                 on_clause=join_clause_on_clause)
 
-                        joins.append(join)
+                        join_clauses.append(join_clause)
 
                         kind = None
                         dataset = None
                         on_tokens = []
 
-                    kind = get_join_kind(token)
+                    kind = get_join_clause_kind(token)
 
                     continue
 
@@ -627,14 +626,14 @@ class FromClause:
                 # Parse comparison token
                 on_tokens.append(token)
 
-            # Create the last join
+            # Create the last join_clause
             if kind and dataset and on_tokens:
                 on_clause = OnClause(token_list=on_tokens)
 
-                join = Join(kind=kind, dataset=dataset, on_clause=on_clause)
-                joins.append(join)
+                join_clause = JoinClause(kind=kind, dataset=dataset, on_clause=on_clause)
+                join_clauses.append(join_clause)
 
-        return from_dataset, joins
+        return from_dataset, join_clauses
 
     def is_equivalent_to(self, other):
         """Returns equivalence of the from-clause logic; this is different than checking
@@ -654,42 +653,42 @@ class FromClause:
             # of order
             equivalent = (self.from_dataset == other.from_dataset
                           or
-                          (self.from_dataset == other.get_first_join_dataset()
+                          (self.from_dataset == other.get_first_join_clause_dataset()
                            and
-                           other.from_dataset == self.get_first_join_dataset()))
+                           other.from_dataset == self.get_first_join_clause_dataset()))
 
             # FUTURE: Work this out
             if equivalent:
-                for self_join in self.joins:
-                    for other_join in other.joins:
-                        if not self_join.is_equivalent_to(other_join):
+                for self_join_clause in self.join_clauses:
+                    for other_join_clause in other.join_clauses:
+                        if not self_join_clause.is_equivalent_to(other_join_clause):
                             equivalent = False
                             break
 
-                for other_join in other.joins:
-                    for self_join in self.joins:
-                        if not other_join.is_equivalent_to(self_join):
+                for other_join_clause in other.join_clauses:
+                    for self_join_clause in self.join_clauses:
+                        if not other_join_clause.is_equivalent_to(self_join_clause):
                             equivalent = False
                             break
 
         return equivalent
 
-    def get_first_join_dataset(self):
-        """Returns the first join's dataset for inner joins but None for left/right
-            joins
+    def get_first_join_clause_dataset(self):
+        """Returns the first join_clause's dataset for inner joins but None for left/right
+            join_clauses
 
         Returns:
-            first_join_dataset (DataSet): The first join's dataset
+            first_join_clause_dataset (DataSet): The first join's dataset
         """
 
-        first_join = self.joins[0]
+        first_join_clause = self.join_clauses[0]
 
-        if first_join.kind in ('inner', 'join'):
-            first_join_dataset = first_join.dataset
+        if first_join_clause.kind in ('inner', 'join_clause'):
+            first_join_clause_dataset = first_join_clause.dataset
         else:
-            first_join_dataset = None
+            first_join_clause_dataset = None
 
-        return first_join_dataset
+        return first_join_clause_dataset
 
     def locate_field(self, s_str):
         """Returns a field's "location" in the where clause
@@ -712,35 +711,35 @@ class FromClause:
 
         locations = []
 
-        for i, join in enumerate(self.joins):
+        for i, join_clause in enumerate(self.join_clauses):
             enumerated_comparisons = enumerate(
-                join.on_clause.expression.comparisons)
+                join_clause.on_clause.expression.comparisons)
 
             for j, comparison in enumerated_comparisons:
                 if s_str in comparison.left_term:
                     location_tuple = (
-                        'from_clause', 'joins', i, 'on_clause', 'expression',
+                        'from_clause', 'join_clauses', i, 'on_clause', 'expression',
                         'comparisons', j, 'left_term')
                     locations.append(location_tuple)
                 elif s_str in comparison.right_term:
                     location_tuple = (
-                        'from_clause', 'joins', i, 'on_clause', 'expression',
+                        'from_clause', 'join_clauses', i, 'on_clause', 'expression',
                         'comparisons', j, 'right_term')
                     locations.append(location_tuple)
 
         return locations
 
-    def remove_join(self, join):
-        """Removes a join from the from clause
+    def remove_join_clause(self, join_clause):
+        """Removes a join_clause from the from clause
         
         Args:
-            join (Join): A join
+            join_clause (Join): A join
         
         Returns:
             None
         """
 
-        self.joins.remove(join)
+        self.join_clauses.remove(join_clause)
 
 
 @dataclass
@@ -1279,8 +1278,8 @@ class Query(DataSet):
         from_dataset = self.from_clause.from_dataset
         counts_dict[from_dataset.name] = from_dataset.count()
 
-        for join in self.from_clause.joins:
-            counts_dict[join.dataset.name] = join.dataset.count()
+        for join_clause in self.from_clause.join_clauses:
+            counts_dict[join_clause.dataset.name] = join_clause.dataset.count()
 
         return counts_dict
 
@@ -1307,11 +1306,11 @@ class Query(DataSet):
             scalarized_query (Query): The resulting query
         """
 
-        joins_to_remove = []
+        join_clauses_to_remove = []
 
-        for join in self.from_clause.joins:
-            if join.kind == 'left':
-                column_names = join.dataset.get_column_names()
+        for join_clause in self.from_clause.join_clauses:
+            if join_clause.kind == 'left':
+                column_names = join_clause.dataset.get_column_names()
 
                 for field in self.select_clause.fields:
                     if field.expression in column_names:
@@ -1319,25 +1318,25 @@ class Query(DataSet):
 
                         subquery_select_clause = SelectClause(fields=[field])
                         subquery_from_clause = FromClause(
-                            from_dataset=join.dataset, db_conn_str=join.dataset.db_conn_str)
+                            from_dataset=join_clause.dataset, db_conn_str=join_clause.dataset.db_conn_str)
                         subquery_where_clause = WhereClause(
-                            expression=join.on_clause.expression)
+                            expression=join_clause.on_clause.expression)
                         subquery = Query(
                             select_clause=subquery_select_clause,
                             from_clause=subquery_from_clause,
                             where_clause=subquery_where_clause,
-                            db_conn_str=join.dataset.db_conn_str)
+                            db_conn_str=join_clause.dataset.db_conn_str)
 
                         alias = field.alias or field.expression
                         expression = f'({str(subquery)})'
                         subquery_field = Field(
-                            expression=expression, alias=alias, query=subquery, db_conn_str=join.dataset.db_conn_str)
+                            expression=expression, alias=alias, query=subquery, db_conn_str=join_clause.dataset.db_conn_str)
                         self.select_clause.add_field(subquery_field)
 
-                        joins_to_remove.append(join)
+                        join_clauses_to_remove.append(join_clause)
 
-        for join_to_remove in joins_to_remove:
-            self.from_clause.remove_join(join_to_remove)
+        for join_clause_to_remove in join_clauses_to_remove:
+            self.from_clause.remove_join_clause(join_clause_to_remove)
 
         scalarized_query = Query(
             select_clause=self.select_clause,
@@ -1366,8 +1365,8 @@ class Query(DataSet):
 
         if not contains_subqueries:
             # FUTURE: Check if a subquery lives in the join's on_clause
-            for join in self.from_clause.joins:
-                if type(join.dataset) == Query:
+            for join_clause in self.from_clause.join_clauses:
+                if type(join_clause.dataset) == Query:
                     contains_subqueries = True
                     break
 

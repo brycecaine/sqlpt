@@ -3,8 +3,8 @@
 from unittest import TestCase
 
 from sqlpt import service
-from sqlpt.sql import (Field, FromClause, Join, OnClause, Query, SelectClause,
-                       Table, WhereClause, parse_fields)
+from sqlpt.sql import (Field, FromClause, Query, SelectClause, WhereClause,
+                       parse_fields)
 
 
 # TODO: Rename this file something other than test_unit
@@ -194,7 +194,7 @@ class ParseTestCase(TestCase):
 
         query = Query(sql_str=sql_str)
         select_subquery = query.select_clause.fields[4].query
-        join_subquery = query.from_clause.joins[1].dataset
+        join_subquery = query.from_clause.join_clauses[1].dataset
 
         self.assertEqual(type(select_subquery), Query)
         self.assertEqual(type(join_subquery), Query)

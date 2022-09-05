@@ -3,7 +3,7 @@ from unittest import TestCase
 from sqlalchemy.engine import Engine
 from sqlpt.sql import (Comparison, DataSet, DeleteClause, DeleteStatement,
                        Expression, ExpressionClause, Field, FromClause,
-                       GroupByClause, HavingClause, Join, OnClause, Query,
+                       GroupByClause, HavingClause, JoinClause, OnClause, Query,
                        QueryResult, SelectClause, SetClause, Table,
                        UpdateClause, UpdateStatement, WhereClause)
 
@@ -280,48 +280,48 @@ class OnClauseTestCase(TestCase):
         self.assertTrue(expression)
 
 
-class JoinTestCase(TestCase):
-    def test_join_create(self):
+class JoinClauseTestCase(TestCase):
+    def test_join_clause_create(self):
         on_clause = OnClause('b = c')
-        join = Join(kind='left', dataset='a', on_clause=on_clause)
+        join_clause = JoinClause(kind='left', dataset='a', on_clause=on_clause)
 
-        self.assertTrue(join)
+        self.assertTrue(join_clause)
 
-    def test_join_simple_kind(self):
-        on_clause = OnClause('b = c')
-
-        join = Join(kind='inner', dataset='a', on_clause=on_clause)
-        self.assertEqual(join.simple_kind, 'join')
-
-        join = Join(kind='left', dataset='a', on_clause=on_clause)
-        self.assertEqual(join.simple_kind, 'left join')
-
-        join = Join(kind='right', dataset='a', on_clause=on_clause)
-        self.assertEqual(join.simple_kind, 'right join')
-
-    def test_join_kind(self):
+    def test_join_clause_simple_kind(self):
         on_clause = OnClause('b = c')
 
-        join = Join(kind='inner', dataset='a', on_clause=on_clause)
-        self.assertEqual(str(join).split(' ')[0], 'join')
+        join_clause = JoinClause(kind='inner', dataset='a', on_clause=on_clause)
+        self.assertEqual(join_clause.simple_kind, 'join')
 
-        join = Join(kind='left', dataset='a', on_clause=on_clause)
-        self.assertEqual(str(join).split(' ')[0], 'left')
+        join_clause = JoinClause(kind='left', dataset='a', on_clause=on_clause)
+        self.assertEqual(join_clause.simple_kind, 'left join')
 
-        join = Join(kind='right', dataset='a', on_clause=on_clause)
-        self.assertEqual(str(join).split(' ')[0], 'right')
+        join_clause = JoinClause(kind='right', dataset='a', on_clause=on_clause)
+        self.assertEqual(join_clause.simple_kind, 'right join')
 
-    def test_join_is_equivalent_to(self):
+    def test_join_clause_kind(self):
+        on_clause = OnClause('b = c')
+
+        join_clause = JoinClause(kind='inner', dataset='a', on_clause=on_clause)
+        self.assertEqual(str(join_clause).split(' ')[0], 'join')
+
+        join_clause = JoinClause(kind='left', dataset='a', on_clause=on_clause)
+        self.assertEqual(str(join_clause).split(' ')[0], 'left')
+
+        join_clause = JoinClause(kind='right', dataset='a', on_clause=on_clause)
+        self.assertEqual(str(join_clause).split(' ')[0], 'right')
+
+    def test_join_clause_is_equivalent_to(self):
         # TODO: Allow all classes to accept a single s_str argument or keyword args
         dataset = Table(name='a', db_conn_str=DB_CONN_STR)
 
         on_clause_1 = OnClause('b = c')
-        join_1 = Join(kind='left', dataset=dataset, on_clause=on_clause_1)
+        join_clause_1 = JoinClause(kind='left', dataset=dataset, on_clause=on_clause_1)
 
         on_clause_2 = OnClause('c = b')
-        join_2 = Join(kind='left', dataset=dataset, on_clause=on_clause_2)
+        join_clause_2 = JoinClause(kind='left', dataset=dataset, on_clause=on_clause_2)
 
-        self.assertTrue(join_1.is_equivalent_to(join_2))
+        self.assertTrue(join_clause_1.is_equivalent_to(join_clause_2))
 
 
 class FromClauseTestCase(TestCase):
@@ -330,13 +330,13 @@ class FromClauseTestCase(TestCase):
 
         self.assertTrue(from_clause)
 
-    def test_from_clause_create_from_dataset_joins(self):
+    def test_from_clause_create_from_dataset_join_clauses(self):
         dataset_1 = Table(name='a')
         dataset_2 = Table(name='b')
         on_clause = OnClause('c = d')
-        join = Join(kind='left', dataset=dataset_2, on_clause=on_clause)
-        joins = [join]
-        from_clause = FromClause(from_dataset=dataset_1, joins=joins)
+        join_clause = JoinClause(kind='left', dataset=dataset_2, on_clause=on_clause)
+        join_clauses = [join_clause]
+        from_clause = FromClause(from_dataset=dataset_1, join_clauses=join_clauses)
 
         self.assertTrue(from_clause)
 
@@ -349,52 +349,52 @@ class FromClauseTestCase(TestCase):
     def test__parse_from_clause_from_tokens(self):
         s_str = 'from a left join b on c = d'
         token_list = FromClause._parse_from_clause_from_str(s_str)
-        from_dataset, joins = FromClause._parse_from_clause_from_tokens(token_list)
+        from_dataset, join_clauses = FromClause._parse_from_clause_from_tokens(token_list)
 
         self.assertEqual(type(from_dataset), Table)
-        self.assertEqual(type(joins), list)
+        self.assertEqual(type(join_clauses), list)
 
     def test_from_clause_is_equivalent_to(self):
         dataset_1 = Table(name='a')
         dataset_2 = Table(name='b')
 
         on_clause_1 = OnClause('c = d')
-        join_1 = Join(kind='left', dataset=dataset_2, on_clause=on_clause_1)
-        joins_1 = [join_1]
+        join_clause_1 = JoinClause(kind='left', dataset=dataset_2, on_clause=on_clause_1)
+        join_clauses_1 = [join_clause_1]
 
         on_clause_2 = OnClause('d = c')
-        join_2 = Join(kind='left', dataset=dataset_2, on_clause=on_clause_2)
-        joins_2 = [join_2]
+        join_clause_2 = JoinClause(kind='left', dataset=dataset_2, on_clause=on_clause_2)
+        join_clauses_2 = [join_clause_2]
 
-        from_clause_1 = FromClause(from_dataset=dataset_1, joins=joins_1)
-        from_clause_2 = FromClause(from_dataset=dataset_1, joins=joins_2)
+        from_clause_1 = FromClause(from_dataset=dataset_1, join_clauses=join_clauses_1)
+        from_clause_2 = FromClause(from_dataset=dataset_1, join_clauses=join_clauses_2)
 
         self.assertTrue(from_clause_1.is_equivalent_to(from_clause_2))
 
-    def test_from_clause_first_join_dataset(self):
+    def test_from_clause_first_join_clause_dataset(self):
         dataset_1 = Table(name='a')
         dataset_2 = Table(name='b')
         on_clause = OnClause('c = d')
-        join = Join(kind='inner', dataset=dataset_2, on_clause=on_clause)
-        joins = [join]
-        from_clause = FromClause(from_dataset=dataset_1, joins=joins)
+        join_clause = JoinClause(kind='inner', dataset=dataset_2, on_clause=on_clause)
+        join_clauses = [join_clause]
+        from_clause = FromClause(from_dataset=dataset_1, join_clauses=join_clauses)
 
-        first_join_dataset = from_clause.get_first_join_dataset()
+        first_join_clause_dataset = from_clause.get_first_join_clause_dataset()
 
-        self.assertEqual(first_join_dataset, dataset_2)
+        self.assertEqual(first_join_clause_dataset, dataset_2)
 
     def test_from_clause_locate_field(self):
         dataset_1 = Table(name='a')
         dataset_2 = Table(name='b')
         on_clause = OnClause('c = d')
-        join = Join(kind='inner', dataset=dataset_2, on_clause=on_clause)
-        joins = [join]
-        from_clause = FromClause(from_dataset=dataset_1, joins=joins)
+        join_clause = JoinClause(kind='inner', dataset=dataset_2, on_clause=on_clause)
+        join_clauses = [join_clause]
+        from_clause = FromClause(from_dataset=dataset_1, join_clauses=join_clauses)
 
         location = from_clause.locate_field('c')
         expected_locations = [
             ('from_clause',
-             'joins',
+             'join_clauses',
              0,
              'on_clause',
              'expression',
@@ -409,11 +409,11 @@ class FromClauseTestCase(TestCase):
         dataset_1 = Table(name='a')
         dataset_2 = Table(name='b')
         on_clause = OnClause('c = d')
-        join = Join(kind='inner', dataset=dataset_2, on_clause=on_clause)
-        joins = [join]
-        from_clause = FromClause(from_dataset=dataset_1, joins=joins)
+        join_clause = JoinClause(kind='inner', dataset=dataset_2, on_clause=on_clause)
+        join_clauses = [join_clause]
+        from_clause = FromClause(from_dataset=dataset_1, join_clauses=join_clauses)
 
-        from_clause.remove_join(join)
+        from_clause.remove_join_clause(join_clause)
 
         self.assertEqual(str(from_clause), 'from a')
 
@@ -728,7 +728,7 @@ class QueryTestCase(TestCase):
 
         self.assertEqual(actual_counts, expected_counts)
 
-    def test_query_counts_joins(self):
+    def test_query_counts_join_clauses(self):
         sql_str = '''
             select *
               from student
@@ -854,29 +854,29 @@ class QueryTestCase(TestCase):
         self.assertEqual(actual_select_clause, expected_select_clause)
         self.assertEqual(str(actual_select_clause), expected_select_clause_str)
 
-    def test_joins(self):
-        join_dict = {
+    def test_join_clauses(self):
+        join_clause_dict = {
             'kind': 'inner',
             'dataset': Table(name='d', db_conn_str=DB_CONN_STR),
             'on_clause': OnClause(s_str='on e = f')}
-        expected_joins = [Join(**join_dict)]
+        expected_join_clauses = [JoinClause(**join_clause_dict)]
 
-        actual_joins = self.query.from_clause.joins
+        actual_join_clauses = self.query.from_clause.join_clauses
 
-        self.assertEqual(actual_joins, expected_joins)
+        self.assertEqual(actual_join_clauses, expected_join_clauses)
 
-        self.assertEqual(str(actual_joins[0]), 'join d on e = f')
+        self.assertEqual(str(actual_join_clauses[0]), 'join d on e = f')
 
     def test_from_clause(self):
-        join_dict = {
+        join_clause_dict = {
             'kind': 'inner',
             'dataset': Table(name='d', db_conn_str=DB_CONN_STR),
             'on_clause': OnClause(s_str='on e = f')}
-        expected_joins = [Join(**join_dict)]
+        expected_join_clauses = [JoinClause(**join_clause_dict)]
 
         expected_table = Table(name='c', db_conn_str=DB_CONN_STR)
         expected_from_clause = FromClause(
-            from_dataset=expected_table, joins=expected_joins)
+            from_dataset=expected_table, join_clauses=expected_join_clauses)
         actual_from_clause = self.query.from_clause
 
         self.assertEqual(actual_from_clause, expected_from_clause)

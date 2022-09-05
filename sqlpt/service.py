@@ -123,14 +123,14 @@ def is_equivalent(object_list_1, object_list_2):
     return equivalent
 
 
-def is_join(item):
+def is_join_clause(item):
     """ docstring tbd """
-    item_is_join = False
+    item_is_join_clause = False
 
     if type(item) == Token and 'join' in str(item).lower():
-        item_is_join = True
+        item_is_join_clause = True
 
-    return item_is_join
+    return item_is_join_clause
 
 
 def is_conjunction(item):
@@ -155,14 +155,14 @@ def is_sqlparse_comparison(item):
     return item_is_comparison
 
 
-def get_join_kind(item):
+def get_join_clause_kind(item):
     """ docstring tbd """
-    join_kind = 'inner'
+    join_clause_kind = 'inner'
 
     if type(item) == Token and 'left' in str(item).lower():
-        join_kind = 'left'
+        join_clause_kind = 'left'
 
-    return join_kind
+    return join_clause_kind
 
 
 def get_truth_table_result(expr):
