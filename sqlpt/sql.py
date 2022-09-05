@@ -313,7 +313,6 @@ class ExpressionClause:
     leading_word: str  #  = dataclass_field(repr=False)
     expression: Expression
 
-    # TODO: remove args and kwargs
     def __init__(self, s_str=None, leading_word=None, expression=None, token_list=None):
         if s_str:
             token_list = self.parse_expression_clause(s_str)
@@ -369,7 +368,6 @@ class ExpressionClause:
             expression (Expression): An Expression instance based on the token list
         """
 
-        # TODO: Set this to None instead of ''?
         expression = ''
 
         for sql_token in token_list:

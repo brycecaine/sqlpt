@@ -629,8 +629,6 @@ class QueryTestCase(TestCase):
 
         self.assertEqual(actual_sql, expected_sql)
 
-    # TODO: Move QueryTestCase methods from test_unit.py to here
-
     def test_run_parameterized_query(self):
         """ docstring tbd """
         sql_str_scalarized = '''
@@ -752,7 +750,7 @@ class QueryTestCase(TestCase):
 
     # FUTURE: Test rows_exist
 
-    # TODO: Unskip this when fixed (the term Table wasn't getting the db_conn_str)
+    # FUTURE: Unskip this when fixed (the term Table wasn't getting the db_conn_str)
     def skip_test_query_scalarize(self):
         sql_str_original = '''
             select subject,
@@ -981,7 +979,7 @@ class FieldTestCase(TestCase):
         self.assertEqual(field.query, Query())
 
 
-# TODO: Test UpdateClause
+# FUTURE: Test UpdateClause
 
 
 class SetClauseTestCase(TestCase):
@@ -1045,7 +1043,7 @@ class UpdateStatementTestCase(TestCase):
                          expected_expected_row_count)
 
 
-# TODO: Test DeleteClause
+# FUTURE: Test DeleteClause
 
 
 class DeleteStatementTestCase(TestCase):
@@ -1080,4 +1078,4 @@ class DeleteStatementTestCase(TestCase):
 # TODO: Test parse_fields
 # TODO: Test parse_fields_from_token_list
 
-# TODO: See if those last module-level functions could be static methods
+# FUTURE: See if those last module-level functions could be static methods
