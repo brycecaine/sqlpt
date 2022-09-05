@@ -580,10 +580,10 @@ class QueryTestCase(TestCase):
 
         self.assertFalse(uniqueness)
 
-    def test_query_locate_column(self):
+    def test_query_locate_field(self):
         query = Query(sql_str='select a, b from student_section')
 
-        location = query.locate_column('b')
+        location = query.locate_field('b')
         expected_locations = [('select_clause', 'fields', 1)]
 
         self.assertEqual(location, expected_locations)

@@ -242,7 +242,7 @@ class SelectClause:
                 locations.append(('select_clause', 'fields', i))
 
             if field.query:
-                locations.extend(field.query.locate_column(s_str))
+                locations.extend(field.query.locate_field(s_str))
 
         return locations
 
@@ -986,10 +986,10 @@ class HavingClause(ExpressionClause):
         return token_list
 
 
-# TODO: Add suport for insert statements
+# FUTURE: Add suport for insert statements
+# FUTURE: Add suport for OrderByClause
 
 
-# TODO: Add suport for OrderByClause
 @dataclass
 class Query(DataSet):
     """A sql query"""
@@ -1011,7 +1011,6 @@ class Query(DataSet):
             # TODO: Do away with these "or None"s?
             select_clause = SelectClause(sql_str) or None
             from_clause = FromClause(s_str=sql_str, db_conn_str=db_conn_str) or None
-            # TODO: Make sure every class is instantiated with keyword arguments (but don't accept a general kwargs in init in order to be explicit)
             where_clause = WhereClause(s_str=sql_str) or None
             group_by_clause = None
             having_clause = None
@@ -1099,8 +1098,7 @@ class Query(DataSet):
         return clauses_equal
 
 
-    # TODO: Consider standardizing this to locate_field?
-    def locate_column(self, s_str):
+    def locate_field(self, s_str):
         """Returns a columns's "location" in the query
         
         Args:
@@ -1161,7 +1159,7 @@ class Query(DataSet):
             if 'no such column' in str(e):
                 error_msg = str(e).split('\n')[0]
                 invalid_column_name = error_msg.split(': ')[1]
-                invalid_column_coordinates = self.locate_column(
+                invalid_column_coordinates = self.locate_field(
                     invalid_column_name)
 
         return invalid_column_coordinates
@@ -1458,7 +1456,7 @@ class Field:
 
         else:
             if expression:
-                # TODO: Unhardcode this
+                # FUTURE: Unhardcode this
                 if query:
                     if query.from_clause:
                         query.from_clause.from_dataset.db_conn_str = db_conn_str
