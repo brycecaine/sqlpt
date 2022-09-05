@@ -58,7 +58,7 @@ class DataSet:
 
         from_clause = FromClause(from_dataset=self)
 
-        group_by_clause = GroupByClause(field_names)
+        group_by_clause = GroupByClause(field_names=field_names)
 
         having_clause = HavingClause(s_str='having count(*) > 1')
 
@@ -932,15 +932,7 @@ class GroupByClause:
     """ docstring tbd """
     field_names: list
 
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1:
-            if type(args[0]) == list:
-                # FUTURE: Allow list of Field objects
-                field_names = args[0]
-
-        else:
-            field_names = kwargs.get('field_names')
-
+    def __init__(self, s_str=None, field_names=None):
         self.field_names = field_names
 
     def __str__(self):

@@ -3,9 +3,9 @@ from unittest import TestCase
 from sqlalchemy.engine import Engine
 from sqlpt.sql import (Comparison, DataSet, DeleteClause, DeleteStatement,
                        Expression, ExpressionClause, Field, FromClause,
-                       HavingClause, Join, OnClause, Query, QueryResult,
-                       SelectClause, SetClause, Table, UpdateClause,
-                       UpdateStatement, WhereClause)
+                       GroupByClause, HavingClause, Join, OnClause, Query,
+                       QueryResult, SelectClause, SetClause, Table,
+                       UpdateClause, UpdateStatement, WhereClause)
 
 DB_CONN_STR = 'sqlite:///sqlpt/college.db'
 
@@ -491,9 +491,11 @@ class WhereClauseTestCase(TestCase):
 
 
 class GroupByClauseTestCase(TestCase):
-    def test_join_clause_create(self):
-        # TODO: Come back to this after testing all expression clause types
-        pass
+    def test_group_by_clause_create(self):
+        field_names = ['student_id', 'term_id', 'section_id']
+        group_by_clause = GroupByClause(field_names=field_names)
+
+        self.assertTrue(group_by_clause)
 
 
 class HavingClauseTestCase(TestCase):
