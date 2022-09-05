@@ -316,10 +316,10 @@ class ExpressionClause:
     def __init__(self, s_str=None, leading_word=None, expression=None, token_list=None):
         if s_str:
             token_list = self.parse_expression_clause(s_str)
-            leading_word, expression = self.__class__.get_expression_clause_parts(token_list)
+            leading_word, expression = self.get_expression_clause_parts(token_list)
 
         elif token_list:
-            leading_word, expression = self.__class__.get_expression_clause_parts(token_list)
+            leading_word, expression = self.get_expression_clause_parts(token_list)
 
         self.leading_word = leading_word
         self.expression = expression
@@ -425,7 +425,7 @@ class OnClause(ExpressionClause):
             token_list (list): A token list
         """
 
-        token_list = self.__class__.parse_on_clause(s_str)
+        token_list = self.parse_on_clause(s_str)
 
         return token_list
 
@@ -852,7 +852,7 @@ class WhereClause(ExpressionClause):
     def __init__(self, s_str=None, expression=None, token_list=None):
         super().__init__(s_str=s_str, leading_word='where', expression=expression, token_list=token_list)
 
-    # TODO: Test this in test_classes
+    # FUTURE: Test this in test_classes
     @staticmethod
     def _parse_where_clause(s_str):
         """Parses and returns a where-clause token list based on the given string
@@ -884,7 +884,7 @@ class WhereClause(ExpressionClause):
 
         return token_list
 
-    # TODO: Test this in test_classes
+    # FUTURE: Test this in test_classes
     def parse_expression_clause(self, sql_str):
         """Returns a where-clause token list based on the given string
         
@@ -895,7 +895,6 @@ class WhereClause(ExpressionClause):
             token_list (list): A token list
         """
 
-        # TODO: Make sure all staticmethods are called as self. rather than self.__class__.
         token_list = self._parse_where_clause(sql_str)
 
         return token_list
@@ -982,7 +981,7 @@ class HavingClause(ExpressionClause):
             token_list (list): A token list
         """
 
-        token_list = self.__class__.parse_having_clause(s_str)
+        token_list = self.parse_having_clause(s_str)
 
         return token_list
 
@@ -1547,7 +1546,7 @@ class SetClause(ExpressionClause):
             token_list (list): A token list
         """
 
-        token_list = self.__class__.parse_set_clause(s_str)
+        token_list = self.parse_set_clause(s_str)
 
         return token_list
 
