@@ -15,7 +15,7 @@ pip install -i https://test.pypi.org/simple/ sqlpt
 # Deploy to real pypi
 - twine upload dist/sqlpt-0.1.0.tar.gz
 
-# Install from test pypi (me assuming)
+# Install from pypi (me assuming)
 pip install sqlpt
 
 

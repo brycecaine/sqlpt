@@ -17,7 +17,7 @@ DESCRIPTION = 'SQL Probing Tool'
 URL = 'https://github.com/brycecaine/sqlpt'
 EMAIL = 'brycecaine@gmail.com'
 AUTHOR = 'Bryce Caine'
-REQUIRES_PYTHON = '>=3.6.0'
+REQUIRES_PYTHON = '>=3.7.0'
 VERSION = '0.2.0'
 
 # What packages are required for this module to be executed?
