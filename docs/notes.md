@@ -30,6 +30,8 @@ $ twine check dist/*
 ```
 
 ## Deploy to Test PyPi
+Before deploying, make sure dist/ only contains the newly versioned files. If there are
+old files, remove them.
 ```bash
 $ twine upload -r testpypi dist/*
 ```
