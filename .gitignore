@@ -1,8 +1,8 @@
 tests/output/sql/
+*.egg-info/
 *.pyc
 *.csv
 *.db
-*.egg-info
 *.tar.gz
 *.whl
 .vscode
