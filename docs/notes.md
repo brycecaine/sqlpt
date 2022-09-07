@@ -18,6 +18,11 @@ $ brew install tree
 ## Build Package Files
 ```bash
 $ cd /Users/caine/workspace/sqlpt
+```
+
+Bump version before building
+```bash
+$ bumpver update --patch
 $ python -m build
 ```
 
