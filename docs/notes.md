@@ -17,6 +17,7 @@ $ brew install tree
 
 ## Build Package Files
 ```bash
+$ cd /Users/caine/workspace/sqlpt
 $ python -m build
 ```
 
