@@ -1,7 +1,7 @@
 # sqlpt - SQL Probing Tool
 
-**`sqlpt`** is a sql probing tool for Python that provides insight into specific parts of sql queries.
-`sqlpt` is to a sql query as a multimeter is to a circuit board.
+**`sqlpt`** is a probing tool for Python that helps to inspect and modify sql statements. Its goal is to allow sql statements to be more visible in the application development process and to allow capturing, reusing, and modifying sql-statement components.
+
 
 # Example
 
@@ -46,27 +46,33 @@ FromClause(from_dataset=Table(name='person'), joins=[])
 2
 ```
 
-Another quick example before a more comprehensive description--let's probe a scalar subquery in the select claus:
+Another quick example before a more comprehensive description--let's probe a scalar subquery in the select clause:
 
 ```python
 >>> sql_str = '''
-        select subject,
-                course_number,
-                (select name from term where section.term_id = term.id) name
-           from section
+        select name,
+               favorite_food,
+               (select name from country where person.birth_country_id = country.id) country_name
+          from person
 '''
 
 >>> query = Query(sql_str)
 
 >>> query.select_clause.fields[2].query.crop().count()
-2
+195  # ~Number of countries in the world
 ```
+
+Several more features exist for inspecting and modifying sql queries. Enjoy probing!
+
 
 # Reasoning
 
 Accurate and well-performing sql queries take careful construction. Having a good understanding of the tables, joins, and filters is essential to forming such queries. `sqlpt` provides tools to inspect areas of sql queries to make more informed design decisions.
 
-These tools utilize sql parsing (`python-sqlparse`) but also provide the probing functionality described above.
+`sqlpt` utilizes the very useful Python package [`python-sqlparse`](https://pypi.org/project/sqlparse) and builds upon the idea of parsing sql by converting sql queries and their components (i.e., select, from, where clauses) into objects to help manage, modify, and probe sql queries themselves.
+
+The goal of `sqlpt` is not to be another ORM. Several Python ORMs and other sql-related packages (i.e., [SQLAlchemy](https://pypi.org/project/SQLAlchemy)) already do a masterful job of interfacing with databases and representing database objects as Python objects. Complementarily, `sqlpt` places more of the focus on the sql itself, making it a first-class citizen, in an effort to make it more transparent to the developer. It gives tools to both interact with the actual sql as well as run the sql against a database. The goal is to help developers not by ambiguating sql but by bringing sql to the forefront in the development process and simplifying using it in applications. The hope is that there are no surprises or black boxes when using sql.
+
 
 # Installation
 
@@ -74,9 +80,11 @@ These tools utilize sql parsing (`python-sqlparse`) but also provide the probing
 pip install sqlpt
 ```
 
+
 # Documentation
 
 https://sqlpt.readthedocs.io
+
 
 # Features
 
@@ -95,18 +103,29 @@ https://sqlpt.readthedocs.io
 
 ## Modifying
 
-- [ ] Add/remove select-clause field
-- [ ] Add/remove from-clause join
-- [ ] Add/remove where-clause filter
+- [ ] Add select-clause field
+- [ ] Remove select-clause field
+- [ ] Add from-clause join
+- [x] Remove from-clause join
+- [ ] Add where-clause filter
+- [ ] Remove where-clause filter
 - [x] Crop where-clause filter
 - [x] Convert left join without where-clause filter to scalar subquery in select clause
 - [x] Parameterize query with dangling comparison terms
+- [ ] Convert select statement to insert statement
 - [ ] Convert select statement to update statement
+
 
 # Future areas of improvement
 
-## Code
+## Refactoring
 - [ ] Underscore methods and where to locate methods (move some to service)
 - [ ] Distinguish between s_str and sql_str everywhere (s_str being a snippet and sql_str a full query sql)
-- [ ] Document all different ways to construct each clause
 - [ ] Address FUTURE notes in code
+
+## Documentation
+- [ ] Document all different ways to construct each clause
+
+## Functionality
+- [ ] Support insert statements
+- [ ] Support order-by clauses
