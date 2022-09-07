@@ -996,10 +996,6 @@ class HavingClause(ExpressionClause):
         return token_list
 
 
-# FUTURE: Add suport for insert statements
-# FUTURE: Add suport for OrderByClause
-
-
 @dataclass
 class Query(DataSet):
     """A sql query"""
