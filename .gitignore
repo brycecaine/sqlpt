@@ -4,4 +4,5 @@ tests/output/sql/
 *.db
 *.egg-info
 *.tar.gz
+*.whl
 .vscode
