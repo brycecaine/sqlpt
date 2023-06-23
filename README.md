@@ -127,5 +127,5 @@ https://sqlpt.readthedocs.io
 - [ ] Document all different ways to construct each clause
 
 ## Functionality
-- [ ] Support insert statements
-- [ ] Support order-by clauses
+- [x] Support insert statements
+- [x] Support order-by clauses

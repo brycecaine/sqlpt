@@ -4,7 +4,7 @@ from sqlalchemy.engine import Engine
 from sqlpt.sql import (Comparison, DataSet, DeleteClause, DeleteStatement,
                        Expression, ExpressionClause, Field, FromClause,
                        GroupByClause, HavingClause, InsertClause,
-                       InsertStatement, JoinClause, OnClause, Query,
+                       InsertStatement, JoinClause, OnClause, OrderByClause, Query,
                        QueryResult, SelectClause, SetClause, Table,
                        UpdateClause, UpdateStatement, ValuesClause,
                        WhereClause)
@@ -1159,3 +1159,13 @@ class DeleteStatementTestCase(TestCase):
 # FUTURE: Test parse_fields_from_token_list
 
 # FUTURE: See if those last module-level functions could be static methods
+
+
+class OrderByClauseTestCase(TestCase):
+    def test_basic(self):
+        s_str = "order by name asc"
+
+        order_columns = [{'column': 'name', 'direction': 'asc'}]
+        order_by_clause = OrderByClause(order_columns=order_columns)
+
+        self.assertEqual(str(order_by_clause), s_str)

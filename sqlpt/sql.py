@@ -996,6 +996,28 @@ class HavingClause(ExpressionClause):
         return token_list
 
 
+class OrderByClause:
+    """ docstring tbd """
+    order_columns: list
+
+    def __init__(self, s_str=None, order_columns=None):
+        order_columns = order_columns or []
+
+        self.order_columns = order_columns
+
+    def __str__(self):
+        if self.order_columns:
+            string = 'order by '
+
+            for order_column in self.order_columns:
+                string += f'{order_column["column"]} {order_column["direction"]}, '
+
+            # Remove trailing comma and space
+            string = string[:-2]
+
+        return string
+
+
 @dataclass
 class Query(DataSet):
     """A sql query"""
