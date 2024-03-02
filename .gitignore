@@ -2,7 +2,6 @@ tests/output/sql/
 *.egg-info/
 *.pyc
 *.csv
-*.db
 *.tar.gz
 *.whl
 .vscode
