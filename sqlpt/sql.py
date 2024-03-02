@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 
 import sqlparse
-from sqlalchemy import create_engine, exc, inspect
+from sqlalchemy import create_engine, exc, inspect, text as sqltext
 from sqlparse.sql import Comparison as SqlParseComparison
 from sqlparse.sql import Identifier, IdentifierList, Parenthesis, Token, Where
 
@@ -1244,7 +1244,7 @@ class Query(DataSet):
         rows = []
 
         with self.db_conn.connect() as db_conn:
-            rows = db_conn.execute(str(self), **kwargs)
+            rows = db_conn.execute(statement=sqltext(str(self)), parameters=kwargs)
             row_dicts = QueryResult()
 
             for row in rows:
