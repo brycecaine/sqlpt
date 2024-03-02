@@ -621,9 +621,10 @@ class QueryTestCase(TestCase):
 
         query = Query(sql_str=sql_str_scalarized, db_conn_str=DB_CONN_STR)
 
-        query.select_clause.fields[2].query.db_conn_str = DB_CONN_STR
+        subquery = query.select_clause.fields[2].query
+        subquery.db_conn_str = DB_CONN_STR
 
-        actual_sql = str(query.select_clause.fields[2].query.parameterize())
+        actual_sql = str(subquery.parameterize())
         expected_sql = 'select name from term where term.id = :term_id'
 
         self.assertEqual(actual_sql, expected_sql)
