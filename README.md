@@ -129,3 +129,10 @@ https://sqlpt.readthedocs.io
 ## Functionality
 - [x] Support insert statements
 - [x] Support order-by clauses
+- [ ] Allow for from-clause equivalence if tables and comparisons are out of order
+- [ ] Implement query equivalence
+- [ ] Create sql functions from subqueries in select clauses
+
+## Code Quality
+- [ ] Allow all classes to accept a single s_str argument or keyword args
+- [ ] Raise exceptions if required kwargs aren't passed into __init__ methods
