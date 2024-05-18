@@ -1266,7 +1266,7 @@ class Query(DataSet):
         rows = []
 
         with self.db_conn.connect() as db_conn:
-            rows = db_conn.execute(statement=sqltext(str(self)), parameters=kwargs)
+            rows = db_conn.execute(statement=sqltext(str(self)), **kwargs)
             row_dicts = QueryResult()
 
             for row in rows:
