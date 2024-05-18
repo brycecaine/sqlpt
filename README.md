@@ -127,8 +127,8 @@ https://sqlpt.readthedocs.io
 - [ ] Document all different ways to construct each clause
 
 ## Functionality
-- [ ] Support insert statements
-- [ ] Support order-by clauses
+- [x] Support insert statements
+- [x] Support order-by clauses
 - [ ] Allow for from-clause equivalence if tables and comparisons are out of order
 - [ ] Implement query equivalence
 - [ ] Create sql functions from subqueries in select clauses

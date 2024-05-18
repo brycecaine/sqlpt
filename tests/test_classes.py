@@ -3,9 +3,11 @@ from unittest import TestCase
 from sqlalchemy.engine import Engine
 from sqlpt.sql import (Comparison, DataSet, DeleteClause, DeleteStatement,
                        Expression, ExpressionClause, Field, FromClause,
-                       GroupByClause, HavingClause, JoinClause, OnClause, Query,
+                       GroupByClause, HavingClause, InsertClause,
+                       InsertStatement, JoinClause, OnClause, OrderByClause, Query,
                        QueryResult, SelectClause, SetClause, Table,
-                       UpdateClause, UpdateStatement, WhereClause)
+                       UpdateClause, UpdateStatement, ValuesClause,
+                       WhereClause)
 
 DB_CONN_STR = 'sqlite:///tests/college.db'
 
@@ -774,12 +776,12 @@ class QueryTestCase(TestCase):
         actual_scalarized_query = query.scalarize()
         actual_scalarized_query.db_conn_str = DB_CONN_STR
 
-        print('baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad')
+        print('--- bad ---')
         expected_scalarized_query = Query(sql_str=sql_str_scalarized, db_conn_str=DB_CONN_STR)
-        print('baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad')
+        print('--- bad ---')
 
         print(actual_scalarized_query.select_clause.fields[2].query.from_clause.__dict__)
-        print('ddddddddddddddddd')
+        print('---')
         print(expected_scalarized_query.select_clause.fields[2].query.from_clause.__dict__)
 
         self.assertEqual(actual_scalarized_query, expected_scalarized_query)
@@ -1061,6 +1063,41 @@ class SetClauseTestCase(TestCase):
         self.assertTrue(expression)
 
 
+class InsertStatementTestCase(TestCase):
+    def test_insert_statement_basic(self):
+        sql_str = "insert into student (name, major) values ('bob', 'math')"
+
+        insert_clause = InsertClause(s_str='insert into student (name, major)')
+        values_clause = ValuesClause(s_str="values ('bob', 'math')")
+
+        actual_insert_statement = InsertStatement(
+            insert_clause=insert_clause, values_clause=values_clause)
+
+        self.assertEqual(str(actual_insert_statement), sql_str)
+
+    def test_insert_statement_count(self):
+        sql_str = "insert into student (name, major) values ('bob', 'math')"
+
+        insert_statement = InsertStatement(s_str=sql_str, db_conn_str=DB_CONN_STR)
+
+        actual_expected_row_count = insert_statement.count()
+        expected_expected_row_count = 1
+
+        self.assertEqual(actual_expected_row_count,
+                         expected_expected_row_count)
+
+    def test_insert_statement_values_query(self):
+        sql_str = "insert into student (name, major) select name, major from student_temp"
+
+        insert_clause = InsertClause(s_str='insert into student (name, major)')
+        values_clause = ValuesClause(s_str="select name, major from student_temp")
+
+        actual_insert_statement = InsertStatement(
+            insert_clause=insert_clause, values_clause=values_clause)
+
+        self.assertEqual(str(actual_insert_statement), sql_str)
+
+
 class UpdateStatementTestCase(TestCase):
     def test_update_statement_basic(self):
         sql_str = "update student set major = 'BIOL' where id = 4"
@@ -1069,11 +1106,11 @@ class UpdateStatementTestCase(TestCase):
         set_clause = SetClause(s_str="set major = 'BIOL'")
         where_clause = WhereClause(s_str='where id = 4')
 
-        expected_update_statement = UpdateStatement(
+        actual_update_statement = UpdateStatement(
             update_clause=update_clause, set_clause=set_clause,
             where_clause=where_clause)
 
-        self.assertEqual(sql_str, str(expected_update_statement))
+        self.assertEqual(str(actual_update_statement), sql_str)
 
     def test_update_statement_count(self):
         sql_str = "update student set major = 'BIOL' where id = 4"
@@ -1123,3 +1160,13 @@ class DeleteStatementTestCase(TestCase):
 # FUTURE: Test parse_fields_from_token_list
 
 # FUTURE: See if those last module-level functions could be static methods
+
+
+class OrderByClauseTestCase(TestCase):
+    def test_basic(self):
+        s_str = "order by name asc"
+
+        order_columns = [{'column': 'name', 'direction': 'asc'}]
+        order_by_clause = OrderByClause(order_columns=order_columns)
+
+        self.assertEqual(str(order_by_clause), s_str)

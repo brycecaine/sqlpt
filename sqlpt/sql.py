@@ -996,6 +996,28 @@ class HavingClause(ExpressionClause):
         return token_list
 
 
+class OrderByClause:
+    """ docstring tbd """
+    order_columns: list
+
+    def __init__(self, s_str=None, order_columns=None):
+        order_columns = order_columns or []
+
+        self.order_columns = order_columns
+
+    def __str__(self):
+        if self.order_columns:
+            string = 'order by '
+
+            for order_column in self.order_columns:
+                string += f'{order_column["column"]} {order_column["direction"]}, '
+
+            # Remove trailing comma and space
+            string = string[:-2]
+
+        return string
+
+
 @dataclass
 class Query(DataSet):
     """A sql query"""
@@ -1490,6 +1512,129 @@ class Field:
 
     # FUTURE: can_be_functionalized(self, select_clause)
     # FUTURE: functionalize()
+
+
+@dataclass
+class ValuesClause:
+    """A values clause in an insert statement
+    
+    Can take the form of either of these clauses:
+        values (1, 2)
+
+    ... or:
+        select 1, 2 from tbl
+    
+    """
+    values: list
+    query: Query
+
+    def __init__(self, s_str=None):
+        values = []
+
+        # TODO: Handle keyword parameters passed in
+        # TODO: Parse sql more robustly
+        if 'values' in s_str:
+            sql_parts = s_str.split('values')
+            values = re.sub('[()]', '', sql_parts[1].strip().replace(',', '')).split()
+
+            self.values = values
+
+        else:
+            sql_parts = s_str.split('select')
+            sql_parts.pop(0)
+            values_query_str = f'select{"".join(sql_parts)}'
+            values_query = Query(values_query_str)
+
+            self.query = values_query
+
+    def __str__(self):
+        # TODO: Better determine between a values clause and a values-query clause
+        if hasattr(self, 'values'):
+            values_str = ', '.join(self.values)
+            values_clause_str = f'values ({values_str})'
+        else:
+            values_clause_str = str(self.query)
+
+        return values_clause_str
+
+
+@dataclass
+class InsertClause:
+    """An insert clause in an insert statement"""
+    dataset: DataSet
+    column_names: list
+
+    def __init__(self, s_str=None, dataset=None, column_names=None, db_conn_str=None):
+        s_str = s_str.replace('insert into ', '')
+        sql_parts = s_str.split('values')
+        table_clause_parts = re.sub('[()]', '', sql_parts[0].strip().replace(',', '')).split()
+
+        table_name = table_clause_parts.pop(0)
+        dataset = Table(name=table_name, db_conn_str=db_conn_str)
+        dataset.db_conn_str = db_conn_str
+
+        column_names = table_clause_parts
+
+        self.dataset = dataset
+        self.column_names = column_names
+
+    def __str__(self):
+        column_names_str = ', '.join(self.column_names)
+        insert_clause_str = f'insert into {self.dataset} ({column_names_str})'
+
+        return insert_clause_str
+
+
+@dataclass
+class InsertStatement:
+    """An insert sql statement"""
+    sql_str: str = dataclass_field(repr=False)
+    insert_clause: InsertClause
+    values_clause: ValuesClause
+    db_conn_str: str
+
+    def __init__(self, s_str=None, insert_clause=None, values_clause=None, db_conn_str=None):
+        if s_str:
+            insert_clause = InsertClause(s_str, db_conn_str=db_conn_str) or None
+            values_clause = ValuesClause(s_str=s_str) or None
+
+        self.sql_str = s_str
+        self.insert_clause = insert_clause
+        self.values_clause = values_clause
+        self.db_conn_str = db_conn_str
+
+    def __str__(self):
+        string = str(self.insert_clause)
+
+        string += f' {self.values_clause}'
+
+        return string
+
+    def count(self):
+        """Returns the count related to the insert statement
+        
+        Returns:
+            ct (int): The count related to the insert statement
+        """
+
+        # TODO: Better determine between a values clause and a values-query clause
+        if hasattr(self.values_clause, 'values'):
+            ct = 1
+
+        else:
+            # Return count related to a "values_query"
+            dataset = self.insert_clause.dataset
+            select_clause = SelectClause('select *')
+            from_clause = FromClause(f'from {dataset}')
+
+            query = Query(
+                select_clause=select_clause,
+                from_clause=from_clause,
+                db_conn_str=dataset.db_conn_str)
+
+            ct = query.count()
+
+        return ct
 
 
 @dataclass
