@@ -636,7 +636,7 @@ class QueryTestCase(TestCase):
         sql_str_scalarized = '''
             select subject,
                    course_number,
-                   (select name from term where section.term_id = term.id) name
+                   (select name from term where id = section.term_id) name
               from section
         '''
 
@@ -645,7 +645,7 @@ class QueryTestCase(TestCase):
         query.select_clause.fields[2].query.db_conn_str = DB_CONN_STR
 
         actual_ct = (query.select_clause.fields[2].query
-                     .parameterize().run(term_id=2).count())
+                     .parameterize().run(id=2).count())
         expected_ct = 1
 
         self.assertEqual(actual_ct, expected_ct)

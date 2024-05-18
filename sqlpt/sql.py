@@ -283,10 +283,10 @@ class Expression:
             comparison_token_lists = []
 
             for token in expression_tokens:
-                if type(token) != SqlParseComparison:
+                if not isinstance(token, SqlParseComparison):
                     comparison_token_list.append(token)
 
-                elif type(token) == SqlParseComparison:
+                elif isinstance(token, SqlParseComparison):
                     comparison_token_list.append(token)
                     comparison_token_lists.append(
                         comparison_token_list)  # deepcopy?
@@ -528,7 +528,7 @@ class FromClause:
         from_clause_str = ''
 
         if self.from_dataset:
-            if type(self.from_dataset) == Query:
+            if isinstance(self.from_dataset, Query):
                 dataset_str = f'({self.from_dataset})'
 
             else:
@@ -559,11 +559,11 @@ class FromClause:
         start_appending = False
 
         for sql_token in sql_tokens:
-            if type(sql_token) == Token:
+            if isinstance(sql_token, Token):
                 if sql_token.value.lower() == 'from':
                     start_appending = True
 
-            elif type(sql_token) == Where:
+            elif isinstance(sql_token, Where):
                 break
 
             if start_appending:
@@ -623,7 +623,7 @@ class FromClause:
                     continue
 
                 # Parse dataset token
-                if type(token) in (Identifier, Parenthesis):
+                if isinstance(token, (Identifier, Parenthesis)):
                     dataset = get_dataset(token, db_conn_str)
 
                     continue
@@ -775,7 +775,7 @@ class Comparison:
             elements = []
 
             for sqlparse_comparison in token_list:
-                if type(sqlparse_comparison) == SqlParseComparison:
+                if isinstance(sqlparse_comparison, SqlParseComparison):
                     comparison_tokens = remove_whitespace(sqlparse_comparison.tokens)
 
                     els = [comparison_token.value
@@ -883,7 +883,7 @@ class WhereClause(ExpressionClause):
                 if sql_token.value.lower() == 'from':
                     continue
 
-            elif type(sql_token) == Where:
+            elif isinstance(sql_token, Where):
                 start_appending = True
 
             if start_appending:
@@ -1160,7 +1160,7 @@ class Query(DataSet):
 
         for coordinate in coordinates:
             for component in coordinate:
-                if type(component) == str:
+                if isinstance(component, str):
                     node = getattr(node, component)
 
                 else:
@@ -1219,7 +1219,7 @@ class Query(DataSet):
 
         for coordinate in coordinates:
             for component in coordinate:
-                if type(component) == str:
+                if isinstance(component, str):
                     node = getattr(node, component)
 
                 else:
@@ -1266,7 +1266,7 @@ class Query(DataSet):
         rows = []
 
         with self.db_conn.connect() as db_conn:
-            rows = db_conn.execute(statement=sqltext(str(self)), parameters=kwargs)
+            rows = db_conn.execute(statement=sqltext(str(self)), **kwargs)
             row_dicts = QueryResult()
 
             for row in rows:
@@ -1385,13 +1385,13 @@ class Query(DataSet):
                 break
 
         if not contains_subqueries:
-            if type(self.from_clause.from_dataset) == Query:
+            if isinstance(self.from_clause.from_dataset, Query):
                 contains_subqueries = True
 
         if not contains_subqueries:
             # FUTURE: Check if a subquery lives in the join's on_clause
             for join_clause in self.from_clause.join_clauses:
-                if type(join_clause.dataset) == Query:
+                if isinstance(join_clause.dataset, Query):
                     contains_subqueries = True
                     break
 
@@ -1454,7 +1454,7 @@ class Query(DataSet):
 
     def filter_by_subquery(self, subquery_str, operator, value):
         """ docstring tbd """
-        if type(value) == list:
+        if isinstance(value, list):
             if operator == '=':
                 operator = 'in'
 
@@ -1822,7 +1822,7 @@ def get_dataset(token, db_conn_str=None):
     """ docstring tbd """
     dataset = None
 
-    if type(token) == Parenthesis:
+    if isinstance(token, Parenthesis):
         sql_str = str(token)[1:-1]
         dataset = Query(sql_str=sql_str, db_conn_str=db_conn_str)
 
@@ -1840,11 +1840,11 @@ def parse_select_clause(sql_str):
 
     if str(sql_tokens[0]).lower() == 'select':
         for sql_token in sql_tokens:
-            if type(sql_token) == Token:
+            if isinstance(sql_token, Token):
                 if sql_token.value.lower() == 'from':
                     break
 
-            elif type(sql_token) == Where:
+            elif isinstance(sql_token, Where):
                 break
 
             token_list.append(sql_token)
@@ -1891,7 +1891,7 @@ def parse_fields_from_token_list(field_token_list):
     for identifier in remove_whitespace(field_token_list, (';', ',')):
 
         if str(identifier).lower() != 'select':
-            if type(identifier) == IdentifierList:
+            if isinstance(identifier, IdentifierList):
                 for inner_identifier in remove_whitespace(identifier, (',')):
                     field_dict = parse_field(str(inner_identifier))
                     fields.append(Field(**field_dict))
