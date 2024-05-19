@@ -1,5 +1,9 @@
 """ docstring tbd """
 
+from sqlalchemy.exc import OperationalError
+from typing import List
+from sqlalchemy.engine import Engine
+
 import re
 from copy import deepcopy
 from dataclasses import dataclass
@@ -16,6 +20,18 @@ from sqlpt.service import (get_join_clause_kind, get_truth_table_result, is_join
 # FUTURE: Allow all classes to accept a single s_str argument or keyword args
 
 
+class ExpressionException(Exception):
+    pass
+
+
+class SelectClauseException(Exception):
+    pass
+
+
+class DataSetException(Exception):
+    pass
+
+
 class QueryResult(list):
     """ docstring tbd """
     def count(self):
@@ -27,7 +43,7 @@ class DataSet:
     """An abstract dataset; can be a table or query"""
 
     @property
-    def db_conn(self):
+    def db_conn(self) -> Engine:
         """Returns the database connection engine based on a connection string
 
         Returns:
@@ -38,7 +54,7 @@ class DataSet:
 
         return db_conn
 
-    def rows_unique(self, field_names):
+    def rows_unique(self, field_names: List[str]) -> bool:
         """Returns the dataset's row-uniqueness based on field_names
 
         Args:
@@ -48,11 +64,17 @@ class DataSet:
             unique (bool): A dataset's row-uniqueness
 
         Raises:
-            Exception: If type is DataSet; an abstract DataSet has no rows
+            DataSetException: If type is DataSet; an abstract DataSet has no rows
         """
 
         if type(self) == DataSet:
-            raise Exception('Cannot check uniqueness of rows on an abstract DataSet')
+            raise DataSetException(
+                'Cannot check uniqueness of rows on an abstract DataSet; please use a '
+                'Table or Query instance instead'
+            )
+
+        if not isinstance(field_names, list):
+            raise TypeError("field_names must be a list")
 
         fields = [Field(field_name) for field_name in field_names]
         select_clause = SelectClause(fields=fields)
@@ -77,70 +99,90 @@ class DataSet:
 
 @dataclass
 class Table(DataSet):
-    """A database table"""
+    """
+    Represents a database table
+
+    Attributes:
+        name (str): The name of the table
+        db_conn_str (str, optional): The database connection string; defaults to None
+    """
 
     name: str
     db_conn_str: str = None
 
-    def __hash__(self):
-        return hash(str(self))
+    def __hash__(self) -> int:
+        return hash(str(self.name))
 
-    def __str__(self):
+    def __str__(self) -> str:
         string = self.name if hasattr(self, 'name') else ''
-
         return string
 
-    def count(self):
-        """Returns the row count for the table
+    def count(self) -> int:
+        """
+        Gets the row count for the table
 
         Returns:
-            row_count (int): The table's row count
+            int: The table's row count
         """
 
-        query = Query(sql_str=f'select rowid from {self.name}', db_conn_str=self.db_conn_str)
-        row_count = query.count()
+        try:
+            query = Query(
+                sql_str=f'select rowid from {self.name}', db_conn_str=self.db_conn_str
+            )
+            row_count = query.count()
+        except OperationalError:
+            row_count = 0
 
         return row_count
 
-    def get_columns(self):
-        """Returns the columns metadata for the table
-        
+    def get_columns(self) -> List[dict]:
+        """
+        Gets the columns metadata for the table
+
         Returns:
-            columns (list): A list of dicts containing the columns metadata
+            list: A list of dicts containing the columns' metadata
         """
 
         insp = inspect(self.db_conn)
         columns = insp.get_columns(self.name)
-
         return columns
 
-    def get_column_names(self):
-        """Returns the column names for the table
-        
+    def get_column_names(self) -> List[str]:
+        """
+        Get the column names for the table
+
         Returns:
-            column_names (list): A list of column names
+            list: A list of column names
         """
 
         columns = self.get_columns()
         column_names = [col_dict['name'] for col_dict in columns]
-
         return column_names
 
-    def is_equivalent_to(self, other):
-        """Returns equivalence of the tables; this is different
-            than checking for equality (__eq__)
+    def is_equivalent_to(self, other: 'Table' = None) -> bool:
+        """
+        Returns the equivalence of the tables; this is different than checking for
+        equality (__eq__)
 
         Args:
             other (Table): Another table to compare to
-            
+
+        Raises:
+            TypeError: If other is missing or is not a Table instance
+
         Returns:
-            equivalent (bool): Whether the table are logically equivalent
+            bool: Whether the tables are logically equivalent
         """
+
+        if not other:
+            raise TypeError("Please provide a Table instance as the 'other' argument")
 
         equivalent = False
 
         if isinstance(other, self.__class__):
             equivalent = self.name == other.name
+        else:
+            raise TypeError("Please provide a Table instance as the 'other' argument")
 
         return equivalent
 
@@ -150,37 +192,46 @@ class SelectClause:
     """A select clause of a sql query"""
     fields: list
 
-    def __init__(self, s_str=None, fields=None):
+    def __init__(self, s_str=None, fields=None) -> None:
+        if s_str is None and fields is None:
+            raise SelectClauseException('Either s_str or fields need to have a value')
+
         self.fields = parse_select_clause(s_str) if s_str else fields
 
-    def __hash__(self):
-        return hash(str(self))
+    def __hash__(self) -> int:
+        return hash(str(self.name))
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         if self.fields:
             return True
 
         return False
 
-    def __str__(self):
-        field_names_str = ', '.join(self.field_names)
-        select_clause_str = f"select {field_names_str}"
+    def __str__(self) -> str:
+        if self.field_names:
+            field_names_str = ', '.join(self.field_names)
+            select_clause_str = f"select {field_names_str}"
+        else:
+            raise SelectClauseException('A select clause must have field names')
 
         return select_clause_str
 
     @property
-    def field_names(self):
+    def field_names(self) -> List[str]:
         """Returns a list of field names from the select clause
 
         Returns:
             field_names
         """
 
-        field_names = [str(field) for field in self.fields]
+        if self.fields:
+            field_names = [str(field) for field in self.fields]
+        else:
+            raise SelectClauseException('A select clause must have field names')
 
         return field_names
 
-    def add_field(self, s_str=None, field=None):
+    def add_field(self, s_str: str = None, field: 'Field' = None) -> List['Field']:
         """Adds a field to the select clause and returns the resulting field list
         
         Args:
@@ -191,11 +242,11 @@ class SelectClause:
             self.fields (list): The resulting field list after the field has been added
         
         Raises:
-            Exception: If neither s_str or field are provided
+            SelectClauseException: If neither s_str or field are provided
         """
 
         if s_str is None and field is None:
-            raise Exception('Either s_str or field need to have values')
+            raise SelectClauseException('Either s_str or field need to have a value')
 
         field = Field(s_str) if s_str else field
 
@@ -203,7 +254,7 @@ class SelectClause:
 
         return self.fields
 
-    def remove_field(self, s_str=None, field=None):
+    def remove_field(self, s_str: str = None, field: 'Field' = None) -> List['Field']:
         """Removes a field from the select clause and returns the resulting fields list
         
         Args:
@@ -215,11 +266,11 @@ class SelectClause:
                 removed
         
         Raises:
-            Exception: If neither s_str or field are provided
+            SelectClauseException: If neither s_str or field are provided
         """
 
         if s_str is None and field is None:
-            raise Exception('Either s_str or field need to have values')
+            raise SelectClauseException('Either s_str or field need to have a value')
 
         field = Field(s_str) if s_str else field
 
@@ -227,7 +278,7 @@ class SelectClause:
 
         return self.fields
 
-    def locate_field(self, s_str):
+    def locate_field(self, s_str: str = None) -> List[tuple]:
         """Returns a field's "location" in the select clause
         
         Args:
@@ -236,6 +287,9 @@ class SelectClause:
         Returns:
             locations (list): The resulting list of field locations
         """
+
+        if s_str is None:
+            raise SelectClauseException('An s_str argument is required')
 
         locations = []
 
@@ -248,7 +302,7 @@ class SelectClause:
 
         return locations
 
-    def is_equivalent_to(self, other):
+    def is_equivalent_to(self, other: 'SelectClause' = None) -> bool:
         """Returns equivalence ignoring the sort order of the fields; this is different
             than checking for equality (__eq__), which considers field order
         Args:
@@ -257,6 +311,11 @@ class SelectClause:
         Returns:
             equivalent (bool): Whether the select clauses are logically equivalent
         """
+
+        if not other:
+            raise TypeError(
+                "Please provide a SelectClause instance as the 'other' argument"
+            )
 
         equivalent = False
 
@@ -301,10 +360,13 @@ class Expression:
     def __str__(self):
         string = ''
 
-        for comparison in self.comparisons:
-            string += f'{str(comparison)} '
+        if self.comparisons:
+            for comparison in self.comparisons:
+                string += f'{str(comparison)} '
 
-        string = string[:-1]
+            string = string[:-1]
+        else:
+            raise ExpressionException('An expression must have comparisons')
 
         return string
 
