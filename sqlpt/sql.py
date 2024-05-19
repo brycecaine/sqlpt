@@ -1,4 +1,6 @@
-""" docstring tbd """
+""" 
+This module provides classes and functions for profiling SQL statements.
+"""
 
 from sqlalchemy.exc import OperationalError
 from typing import List
@@ -33,8 +35,14 @@ class DataSetException(Exception):
 
 
 class QueryResult(list):
-    """ docstring tbd """
+    """A custom list subclass representing the result of a database query
+
+    This class inherits from the built-in `list` class and provides an additional
+    method `count()` to get the number of items in the query result.
+    """
+
     def count(self):
+        """Return the number of items in the query result"""
         return len(self)
 
 
