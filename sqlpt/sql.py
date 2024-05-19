@@ -379,6 +379,7 @@ class Expression:
         return string
 
 
+# TODO: Left off here 2024-05-18 making more robust and adding doc strings
 @dataclass
 class ExpressionClause:
     """An abstract expression clause; can be an on, where, having, or set clause"""
